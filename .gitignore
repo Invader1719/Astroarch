@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.pytype/
+.venv/
+venv/
+.env
+.env.*
+
+# SQLite локальная БД (если вдруг используешь)
+*.sqlite3
+*.db
+
+# Alembic артефакты логов (версии миграций коммитим!)
+alembic.ini
+# Если alembic.ini нужен — убери эту строку, обычно его коммитят
+# alembic/versions/  <-- коммитим!
+
+# --- Node / Vite ---
+node_modules/
+dist/
+.vite/
+
+# --- OS/IDE ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# --- Build/Artifacts ---
+*.log
+*.zip
+*.pdf
+# Генерация TeX — исходники коммитим, скомпилированные PDF — нет
+*.aux
+*.out
+*.toc
+*.synctex.gz
+
+# --- Images large (по желанию LFS) ---
+# (пока не используем LFS; public/backgrounds/stars.jpg коммитим)

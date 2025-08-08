@@ -1,0 +1,40 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{enumitem}
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage{titlesec}
+
+\titleformat{\section}[block]{\large\bfseries\centering}{}{1em}{}
+\title{Подборка задач1}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Задачи}
+
+{% for task in tasks %}
+\noindent\textbf{ЗАДАЧА {{ loop.index }}.}
+{% if task.source %}
+\textit{ ({{ task.source.name }}{% if task.source.year %}, {{ task.source.year }}{% endif %}) }
+{% endif %}
+
+{{ task.text | safe }}
+
+{% if task.answer %}
+\\[0.5em] \textit{Ответ: {{ task.answer | safe }}}
+{% endif %}
+
+{% if task.solution %}
+\\[0.5em] \textit{Решение: {{ task.solution | safe }}}
+{% endif %}
+
+\vspace{1.5em}
+
+{% endfor %}
+
+\end{document}

@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncpg         # если PostgreSQL
+psycopg2-binary # если sync PostgreSQL (не обязательно)
+alembic
+jinja2          # для шаблонов TeX
+python-multipart  # для загрузки файлов
