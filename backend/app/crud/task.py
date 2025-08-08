@@ -92,3 +92,24 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
     db.refresh(db_task)
     return db_task
 
+def get_tasks_for_export(db: Session, filters: dict = None):
+    """
+    Возвращает список задач для экспорта в PDF/TeX.
+    filters — словарь с возможными ключами:
+        year, source_id, topic_id, subtopic_id, difficulty
+    """
+    query = db.query(Task)
+
+    if filters:
+        if "year" in filters and filters["year"] is not None:
+            query = query.filter(Task.year == filters["year"])
+        if "source_id" in filters and filters["source_id"] is not None:
+            query = query.filter(Task.source_id == filters["source_id"])
+        if "topic_id" in filters and filters["topic_id"] is not None:
+            query = query.join(Task.topics).filter_by(id=filters["topic_id"])
+        if "subtopic_id" in filters and filters["subtopic_id"] is not None:
+            query = query.join(Task.subtopics).filter_by(id=filters["subtopic_id"])
+        if "difficulty" in filters and filters["difficulty"] is not None:
+            query = query.filter(Task.difficulty == filters["difficulty"])
+
+    return query.all()
