@@ -38,7 +38,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(lambda: None)):
     """Получает текущего пользователя по токену"""
     from fastapi.security import OAuth2PasswordBearer
-    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
     try:
         token_value = token or Depends(oauth2_scheme)
