@@ -1,5 +1,5 @@
-from pydantic import BaseModel
 from typing import Optional
+from pydantic import BaseModel, ConfigDict
 
 class SourceBase(BaseModel):
     name: str
@@ -12,6 +12,5 @@ class SourceCreate(SourceBase):
 
 class SourceOut(SourceBase):
     id: int
-
-    class Config:
-        orm_mode = True
+    # Pydantic v2: включаем чтение из ORM объектов
+    model_config = ConfigDict(from_attributes=True)

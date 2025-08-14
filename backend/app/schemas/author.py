@@ -1,11 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 
-class TopicBase(BaseModel):
+class AuthorCreate(BaseModel):
     name: str
 
-class TopicCreate(TopicBase):
-    pass
-
-class TopicOut(TopicBase):
+class AuthorOut(BaseModel):
     id: int
+    name: str
     model_config = ConfigDict(from_attributes=True)

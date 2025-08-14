@@ -43,44 +43,59 @@ export default function TasksPage() {
 
   // Загружаем фильтры при старте
   useEffect(() => {
-    fetch("/sources").then(r => r.json()).then(setSources).catch(console.error)
-    fetch("/grades").then(r => r.json()).then(setGrades).catch(console.error)
-    fetch("/topics").then(r => r.json()).then(setTopics).catch(console.error)
-    fetch("/subtopics").then(r => r.json()).then(setSubtopics).catch(console.error)
+    fetch(`/api/sources/`).then(r => r.json()).then(setSources).catch(console.error)
+    fetch(`/api/grades/`).then(r => r.json()).then(setGrades).catch(console.error)
+    fetch(`/api/topics/`).then(r => r.json()).then(setTopics).catch(console.error)
+    fetch(`/api/subtopics/`).then(r => r.json()).then(setSubtopics).catch(console.error)
   }, [])
 
   // Загружаем задачи
-  useEffect(() => {
-    setIsLoading(true)
-    const params = new URLSearchParams()
-    selectedSources.forEach(s => params.append("sources", s))
-    selectedGrades.forEach(g => params.append("grades", String(g)))
-    selectedTopics.forEach(t => params.append("topic_ids", String(t)))
-    selectedSubtopics.forEach(st => params.append("subtopic_ids", String(st)))
+ useEffect(() => {
+  setIsLoading(true)
+  const params = new URLSearchParams()
+  selectedSources.forEach(s => params.append("sources", s))
+  selectedGrades.forEach(g => params.append("grades", String(g)))
+  selectedTopics.forEach(t => params.append("topic_ids", String(t)))
+  selectedSubtopics.forEach(st => params.append("subtopic_ids", String(st)))
 
-    fetch(`/tasks?${params.toString()}`)
-      .then(res => res.json())
-      .then((data: ApiTask[]) => {
-        const mapped: Task[] = data.map(t => ({
-          id: t.id,
-          title: t.text,
-          tags: [
-            ...(t.topics?.map(topic => topic.name) || []),
-            ...(t.subtopics?.map(sub => sub.name) || []),
-            t.source?.name || "",
-            t.source?.grade ? `${t.source.grade} класс` : "",
-            `Сложность: ${t.difficulty}`
-          ].filter(Boolean),
-          year: t.source?.year || new Date(t.created_at).getFullYear()
-        }))
-        setTasks(mapped)
-      })
-      .catch(err => {
-        console.error("Ошибка загрузки задач:", err)
-        setTasks([])
-      })
-      .finally(() => setIsLoading(false))
-  }, [selectedSources, selectedGrades, selectedTopics, selectedSubtopics])
+  const url = `/api/tasks/?${params.toString()}`
+
+  fetch(url, { credentials: "omit" })
+    .then(async (res) => {
+      const ct = res.headers.get("content-type") || ""
+      const text = await res.text()
+
+      if (!res.ok) {
+        console.error(`[tasks] ${url} → HTTP ${res.status}. Preview:\n${text.slice(0, 400)}`)
+        throw new Error(`Ошибка сервера: ${res.status}`)
+      }
+      if (!ct.includes("application/json")) {
+        console.error(`[tasks] ${url} → non-JSON (${ct}). Preview:\n${text.slice(0, 400)}`)
+        throw new Error("Сервер вернул не‑JSON")
+      }
+      return JSON.parse(text) as ApiTask[]
+    })
+    .then((data) => {
+      const mapped: Task[] = data.map(t => ({
+        id: t.id,
+        title: t.text,
+        tags: [
+          ...(t.topics?.map(topic => topic.name) || []),
+          ...(t.subtopics?.map(sub => sub.name) || []),
+          t.source?.name || "",
+          t.source?.grade ? `${t.source.grade} класс` : "",
+          `Сложность: ${t.difficulty}`,
+        ].filter(Boolean),
+        year: t.source?.year || new Date(t.created_at).getFullYear(),
+      }))
+      setTasks(mapped)
+    })
+    .catch(err => {
+      console.error("Ошибка загрузки задач:", err)
+      setTasks([])
+    })
+    .finally(() => setIsLoading(false))
+}, [selectedSources, selectedGrades, selectedTopics, selectedSubtopics])
 
   const toggleSelect = (id: number) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])

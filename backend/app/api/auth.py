@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserPublic, UserLogin
-from app.core.auth import create_access_token
 from app.schemas.user import UserLogin
 from fastapi.responses import JSONResponse
 from app.core.security import (
@@ -13,8 +12,7 @@ from app.core.security import (
     create_access_token,
     get_current_user
 )
-# НИКАКИХ импортов get_current_user отсюда не нужно, обычно он нужен в защищённых эндпоинтах, не в логине/регистрации
-
+from fastapi import Request
 
 router = APIRouter()
 
@@ -46,10 +44,14 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
 
-    token = create_access_token({"sub": db_user.nickname})
+    token = create_access_token({"sub": str(db_user.id)})
     return JSONResponse(content={"access_token": token, "token_type": "bearer"})
 
 
 @router.get("/me", response_model=UserPublic)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.get("/echo-auth")
+def echo_auth(request: Request):
+    return {"authorization": request.headers.get("authorization")}

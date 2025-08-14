@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class UserCreate(BaseModel):
     first_name: str
@@ -15,9 +15,7 @@ class UserPublic(BaseModel):
     nickname: str
     role: str
     lumina: int
-
-    class Config:
-        from_attributes = True  # заменяет устаревший orm_mode
+    model_config = ConfigDict(from_attributes=True)
 
 class UserLogin(BaseModel):
     nickname: str

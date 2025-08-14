@@ -1,22 +1,22 @@
-import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react"
-import path from "path"
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-    },
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   server: {
+    host: true,
+    port: 5173,
     proxy: {
-      "/tasks": "http://localhost:8001",
-      "/topics": "http://localhost:8001",
-      "/sources": "http://localhost:8001",
-      "/subtopics": "http://localhost:8001",
-      "/generate": "http://localhost:8001",
-      "/auth": "http://localhost:8001",
+      "/api": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""), // /api/topics → /topics
+      },
     },
+    watch: { usePolling: true },
   },
-})
+});

@@ -1,61 +1,62 @@
-from pydantic import BaseModel
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, ConfigDict, Field
 
-# ====== Дополнительные схемы ======
-class SourceBase(BaseModel):
+class AuthorShort(BaseModel):
+    id: int
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+class SourceShort(BaseModel):
     id: int
     name: str
     year: Optional[int] = None
     round: Optional[str] = None
     grade: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
-
-class TopicBase(BaseModel):
+class TopicShort(BaseModel):
     id: int
     name: str
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
-
-class SubtopicBase(BaseModel):
+class SubtopicShort(BaseModel):
     id: int
     name: str
     topic_id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
-
-# ====== Существующие схемы ======
+# --- входные модели ---
 class TaskBase(BaseModel):
     text: str
     solution: Optional[str] = None
     answer: Optional[str] = None
     difficulty: int
     source_id: int
-    topic_ids: Optional[List[int]] = []
-    subtopic_ids: Optional[List[int]] = []
+    author_id: Optional[int] = None                # ← НОВОЕ поле
+    topic_ids: List[int] = Field(default_factory=list)
+    subtopic_ids: List[int] = Field(default_factory=list)
 
 class TaskCreate(TaskBase):
     pass
 
+# --- выходная модель ---
 class TaskOut(BaseModel):
     id: int
     text: str
     difficulty: int
     created_at: datetime
-    solution: Optional[str]
-    answer: Optional[str]
-    source: Optional[SourceBase]
-    author: Optional[str] = None
-    topics: List[TopicBase] = []
-    subtopics: List[SubtopicBase] = []
+    solution: Optional[str] = None
+    answer: Optional[str] = None
 
-    class Config:
-        from_attributes = True  # если Pydantic v2
+    source: Optional[SourceShort] = None
+    author: Optional[AuthorShort] = None           # ← заменили str на объект
+    topics: List[TopicShort] = Field(default_factory=list)
+    subtopics: List[SubtopicShort] = Field(default_factory=list)
 
+    model_config = ConfigDict(from_attributes=True)
+
+# фильтр (если используется)
 class TaskFilter(BaseModel):
     year: Optional[int] = None
     source_ids: Optional[List[int]] = None
@@ -64,4 +65,3 @@ class TaskFilter(BaseModel):
     grade: Optional[int] = None
     difficulty_min: Optional[int] = None
     difficulty_max: Optional[int] = None
-    # Дополнительно: include_solution/answer — если будешь добавлять в TeX

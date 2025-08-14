@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Security
 from sqlalchemy.orm import Session
 from typing import List, Optional
+
 from app.core.database import SessionLocal
 from app.schemas.task import TaskOut, TaskCreate
 from app.crud import task as crud_task
 from app.dependencies.auth import require_role
 from app.models.user import User
-from fastapi import Security
-
 
 router = APIRouter()
 
@@ -25,7 +24,7 @@ def read_tasks(
     grades: Optional[List[int]] = Query(None),
     topic_ids: Optional[List[int]] = Query(None),
     subtopic_ids: Optional[List[int]] = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return crud_task.get_all_tasks(
         db,
@@ -33,7 +32,7 @@ def read_tasks(
         sources=sources,
         grades=grades,
         topic_ids=topic_ids,
-        subtopic_ids=subtopic_ids
+        subtopic_ids=subtopic_ids,
     )
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
@@ -47,6 +46,6 @@ def read_task(task_id: int, db: Session = Depends(get_db)):
 def create_task(
     task: TaskCreate,
     db: Session = Depends(get_db),
-    current_user: User = Security(require_role("admin", "moderator"))
+    current_user: User = Security(require_role("admin", "moderator")),
 ):
     return crud_task.create_task(db, task, current_user.id)

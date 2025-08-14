@@ -1,67 +1,96 @@
-import { createContext, useContext, useEffect, useState } from "react"
+// frontend/src/context/AuthContext.tsx
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 type User = {
-  id: number
-  first_name: string
-  last_name: string
-  middle_name?: string
-  nickname: string
-  role: string
-  lumina: number
-}
+  id: number;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  nickname: string;
+  role: string;   // "admin" | "moderator" | "founder" | ...
+  lumina: number;
+};
 
 type AuthContextType = {
-  user: User | null
-  token: string | null
-  login: (token: string) => void
-  logout: () => void
-}
+  user: User | null;
+  token: string | null;
+  login: (token: string) => Promise<void>;
+  logout: () => void;
+};
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem("token"))
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Загружаем пользователя, если есть токен
+  // загрузка профиля, если уже есть токен (перезагрузка страницы и т.п.)
   useEffect(() => {
-    if (token) {
-      fetch("/auth/me", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => {
-          if (!res.ok) throw new Error("Ошибка авторизации")
-          return res.json()
-        })
-        .then(data => setUser(data))
-        .catch(() => {
-          logout()
-        })
+    let abort = new AbortController();
+    async function bootstrap() {
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: abort.signal,
+          credentials: "omit",
+        });
+        if (!res.ok) throw new Error("unauthorized");
+        const me: User = await res.json();
+        setUser(me);
+      } catch {
+        localStorage.removeItem("token");
+        setUser(null);
+        setToken(null);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [token])
+    bootstrap();
+    return () => abort.abort();
+  }, [token]);
 
-  const login = (newToken: string) => {
-    localStorage.setItem("token", newToken)
-    setToken(newToken)
-  }
+  // ⚠️ главное изменение: сразу после login забираем /auth/me и выставляем user
+  const login = async (newToken: string) => {
+    localStorage.setItem("token", newToken);
+    setToken(newToken);
+    try {
+      const res = await fetch(`/api/auth/me`, {
+        headers: { Authorization: `Bearer ${newToken}` },
+        credentials: "omit",
+      });
+      if (!res.ok) throw new Error("unauthorized");
+      const me: User = await res.json();
+      setUser(me);
+    } catch {
+      localStorage.removeItem("token");
+      setToken(null);
+      setUser(null);
+      throw new Error("Ошибка авторизации");
+    }
+  };
 
   const logout = () => {
-    localStorage.removeItem("token")
-    setToken(null)
-    setUser(null)
-  }
+    localStorage.removeItem("token");
+    setToken(null);
+    setUser(null);
+  };
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>
-      {children}
+      {/* пока идёт bootstrap можно показать лоадер/ничего */}
+      {loading ? null : children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error("useAuth должен использоваться внутри AuthProvider")
-  }
-  return context
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth должен использоваться внутри AuthProvider");
+  return ctx;
 }

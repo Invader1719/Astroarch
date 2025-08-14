@@ -17,7 +17,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const res = await fetch("/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname, password })
@@ -33,7 +33,7 @@ export default function LoginPage() {
       // ✅ Сохраняем токен в контекст (и в localStorage внутри него)
       login(data.access_token)
 
-      navigate("/") // после входа отправляем на главную
+      navigate("/profile", { replace: true })
     } catch (err: any) {
       setError(err.message)
     } finally {

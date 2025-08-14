@@ -54,6 +54,8 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
         answer=task.answer,
         difficulty=task.difficulty,
         source_id=task.source_id,
+        author_id=task.author_id,           # ← видимый автор задачи (из справочника)
+        created_by_user_id=user_id          # ← внутренний автор (кто добавил в БД)
     )
     db.add(db_task)
     db.commit()
@@ -67,9 +69,8 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
         subtopics = db.query(Subtopic).filter(Subtopic.id.in_(task.subtopic_ids)).all()
         db_task.subtopics.extend(subtopics)
 
-    # Начисляем Люмину по частям
+    # Начисляем Люмину
     user = db.query(User).filter(User.id == user_id).first()
-    # внутри create_task после получения user
     if user:
         try:
             lumina_add = 0
@@ -84,13 +85,13 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
                 user.lumina += lumina_add
                 db.add(user)
         except Exception as e:
-            # логируем, но не ломаем создание задачи
             print("Ошибка начисления люмин:", e)
 
     print("Начисляем люмину для user.id =", user_id)
     db.commit()
     db.refresh(db_task)
     return db_task
+
 
 def get_tasks_for_export(db: Session, filters: dict = None):
     """

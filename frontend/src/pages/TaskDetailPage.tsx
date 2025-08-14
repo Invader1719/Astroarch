@@ -19,7 +19,7 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null)
 
   useEffect(() => {
-    fetch(`http://localhost:8001/tasks/${id}`)
+    fetch(`/api/tasks/${id}`)
       .then((res) => res.json())
       .then((data) => setTask(data))
       .catch(console.error)

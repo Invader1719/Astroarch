@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from app.core.database import Base, engine
 from app.api import auth  # ← правильно
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +13,7 @@ from app.models import (
     task_topic,
     task_subtopic,
     user,
+    author
 )
 
 # Импорт роутеров
@@ -22,6 +23,7 @@ from app.api import (
     source as source_api,
     subtopic as subtopic_api,
     generate as generate_api,
+    author as author_api
 )
 
 app = FastAPI()
@@ -33,6 +35,7 @@ app.include_router(source_api.router)
 app.include_router(subtopic_api.router)
 app.include_router(generate_api.router)
 app.include_router(export_api.router)
+app.include_router(author_api.router)
 app.include_router(auth.router, prefix="/auth")
 
 app.add_middleware(
