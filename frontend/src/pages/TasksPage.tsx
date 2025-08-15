@@ -19,6 +19,8 @@ type Task = {
   title: string
   tags: string[]
   year: number
+  sourceName?: string    // <— явное имя источника
+  grade?: number         // <— класс
 }
 
 type Source = { id: number; name: string }
@@ -50,52 +52,58 @@ export default function TasksPage() {
   }, [])
 
   // Загружаем задачи
- useEffect(() => {
-  setIsLoading(true)
-  const params = new URLSearchParams()
-  selectedSources.forEach(s => params.append("sources", s))
-  selectedGrades.forEach(g => params.append("grades", String(g)))
-  selectedTopics.forEach(t => params.append("topic_ids", String(t)))
-  selectedSubtopics.forEach(st => params.append("subtopic_ids", String(st)))
+  useEffect(() => {
+    setIsLoading(true)
+    const params = new URLSearchParams()
+    selectedSources.forEach(s => params.append("sources", s))
+    selectedGrades.forEach(g => params.append("grades", String(g)))
+    selectedTopics.forEach(t => params.append("topic_ids", String(t)))
+    selectedSubtopics.forEach(st => params.append("subtopic_ids", String(st)))
 
-  const url = `/api/tasks/?${params.toString()}`
+    const url = `/api/tasks/?${params.toString()}`
 
-  fetch(url, { credentials: "omit" })
-    .then(async (res) => {
-      const ct = res.headers.get("content-type") || ""
-      const text = await res.text()
+    fetch(url, { credentials: "omit" })
+      .then(async (res) => {
+        const ct = res.headers.get("content-type") || ""
+        const text = await res.text()
 
-      if (!res.ok) {
-        console.error(`[tasks] ${url} → HTTP ${res.status}. Preview:\n${text.slice(0, 400)}`)
-        throw new Error(`Ошибка сервера: ${res.status}`)
-      }
-      if (!ct.includes("application/json")) {
-        console.error(`[tasks] ${url} → non-JSON (${ct}). Preview:\n${text.slice(0, 400)}`)
-        throw new Error("Сервер вернул не‑JSON")
-      }
-      return JSON.parse(text) as ApiTask[]
-    })
-    .then((data) => {
-      const mapped: Task[] = data.map(t => ({
-        id: t.id,
-        title: t.text,
-        tags: [
-          ...(t.topics?.map(topic => topic.name) || []),
-          ...(t.subtopics?.map(sub => sub.name) || []),
-          t.source?.name || "",
-          t.source?.grade ? `${t.source.grade} класс` : "",
-          `Сложность: ${t.difficulty}`,
-        ].filter(Boolean),
-        year: t.source?.year || new Date(t.created_at).getFullYear(),
-      }))
-      setTasks(mapped)
-    })
-    .catch(err => {
-      console.error("Ошибка загрузки задач:", err)
-      setTasks([])
-    })
-    .finally(() => setIsLoading(false))
-}, [selectedSources, selectedGrades, selectedTopics, selectedSubtopics])
+        if (!res.ok) {
+          console.error(`[tasks] ${url} → HTTP ${res.status}. Preview:\n${text.slice(0, 400)}`)
+          throw new Error(`Ошибка сервера: ${res.status}`)
+        }
+        if (!ct.includes("application/json")) {
+          console.error(`[tasks] ${url} → non-JSON (${ct}). Preview:\n${text.slice(0, 400)}`)
+          throw new Error("Сервер вернул не‑JSON")
+        }
+        return JSON.parse(text) as ApiTask[]
+      })
+      .then((data) => {
+        const mapped: Task[] = data.map(t => ({
+          id: t.id,
+          title: t.text,
+          tags: [
+            ...(t.topics?.map(topic => topic.name) || []),
+            ...(t.subtopics?.map(sub => sub.name) || []),
+            t.source?.name || "",
+            t.source?.grade ? `${t.source.grade} класс` : "",
+            `Сложность: ${t.difficulty}`,
+          ].filter(Boolean),
+          year: t.source?.year || new Date(t.created_at).getFullYear(),
+          sourceName: t.source?.name,
+          grade: t.source?.grade,
+        }))
+        setTasks(mapped)
+        // ✅ по умолчанию выбираем все задачи текущей выдачи
+        setSelected(mapped.map(t => t.id))
+      })
+      .catch(err => {
+        console.error("Ошибка загрузки задач:", err)
+        setTasks([])
+        setSelected([]) // чтобы не висели старые выбранные id
+      })
+      .finally(() => setIsLoading(false))
+  }, [selectedSources, selectedGrades, selectedTopics, selectedSubtopics])
+
 
   const toggleSelect = (id: number) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
