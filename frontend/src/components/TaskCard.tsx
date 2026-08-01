@@ -1,6 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Link } from "react-router-dom"
+import LatexContent from "@/components/LatexContent"
+import CopyLatexButton from "@/components/CopyLatexButton"
 
 type TaskCardProps = {
   title: string
@@ -23,7 +25,7 @@ export default function TaskCard({ title, tags, year, id, selected, toggleSelect
             className="mt-1"
           />
           <div className="flex-1">
-            <h2 className="text-xl font-semibold">{title}</h2>
+            <LatexContent text={title} className="text-xl font-semibold" />
             <p className="text-sm text-muted-foreground mb-2">Год: {year}</p>
             <div className="flex flex-wrap gap-2 mb-3">
               {tags.map((tag, i) => (
@@ -32,9 +34,12 @@ export default function TaskCard({ title, tags, year, id, selected, toggleSelect
                 </span>
               ))}
             </div>
-            <Button variant="outline" asChild>
-              <Link to={`/task/${id}`}>Открыть</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" asChild>
+                <Link to={`/task/${id}`}>Открыть</Link>
+              </Button>
+              <CopyLatexButton text={title} />
+            </div>
           </div>
         </div>
       </CardContent>

@@ -1,26 +1,56 @@
 \documentclass[12pt]{article}
-\usepackage{amsmath,amssymb}
-\usepackage[utf8]{inputenc}
-\usepackage[T2A]{fontenc}
-\usepackage[russian]{babel}
-\usepackage{enumitem}
-\usepackage[a4paper,margin=2cm]{geometry}
-\usepackage{titlesec}
+\usepackage{amsmath,amssymb,mathtools}
 
-\titleformat{\section}[block]{\large\bfseries\centering}{}{1em}{}
-\title{Подборка задач1}
-\date{}
+% Шрифт — DejaVu Serif: штатный в образе, доп. пакеты не нужны
+\usepackage{fontspec}
+\setmainfont{DejaVu Serif}
+
+\usepackage[russian]{babel}
+
+% Минимальные поля
+\usepackage[a4paper,top=2.5cm,bottom=1.5cm,left=1.5cm,right=1.5cm]{geometry}
+
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx,wrapfig,caption,float}
+\usepackage{titlesec}
+\usepackage{wasysym}
+
+% Заголовки — компактные
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection:}{0.5em}{}
+\titlespacing*{\section}{0pt}{0.8em}{0.3em}
+
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{0.5em}{0.2em}
+
+% Списки — компактные
+\setlist[itemize]{noitemsep, topsep=0pt, left=1.2em}
+\setlist[enumerate]{noitemsep, topsep=0pt, left=1.2em, label=\arabic*.}
+
+% компактные отступы вокруг обтекаемых рисунков и расстояние между колонками
+\setlength{\intextsep}{0.5em}
+\setlength{\columnsep}{1em}
+
+% аккуратные подписи (не растягивать по ширине)
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
+
+% Колонтитулы
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Per Aspera Ad Astra}
+\rhead{Страница \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\lfoot{Тема: }
+\cfoot{Astroach}
+\rfoot{Станислав Потапов}
+\renewcommand{\footrulewidth}{0.4pt}
 
 \begin{document}
 
-\maketitle
-
-\section*{Задачи}
-
 {% for task in tasks %}
 \noindent\textbf{ЗАДАЧА {{ loop.index }}.}
-{% if task.source %}
-\textit{ ({{ task.source.name }}{% if task.source.year %}, {{ task.source.year }}{% endif %}) }
+{% if task.source or task.grade %}
+\textit{ ({% if task.source %}{{ task.source.name }}{% if task.source.round %}, {{ task.source.round }}{% endif %}{% if task.source.year %}, {{ task.source.year }}{% endif %}{% endif %}{% if task.grade %}, {{ task.grade }} класс{% endif %}) }
 {% endif %}
 
 {{ task.text | safe }}

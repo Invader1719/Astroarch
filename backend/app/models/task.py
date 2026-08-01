@@ -13,6 +13,7 @@ class Task(Base):
     solution = Column(Text, nullable=True)
     answer = Column(Text, nullable=True)
     difficulty = Column(Integer, nullable=False)
+    grade = Column(Integer, nullable=True)  # класс, для которого задача (9/10/11) — атрибут задачи, не источника
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("authors.id"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())

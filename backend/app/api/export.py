@@ -1,22 +1,55 @@
 # app/api/export.py
-from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
-from typing import Optional, List
+from io import BytesIO
 
-from app.core.security import require_role  # или твой метод
-from app.schemas.task import TaskFilter  # опиши фильтры (см. ниже)
-from app.crud.task import get_tasks_for_export  # реализуем шагом ниже
-from app.services.tex_export import build_tex_zip
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.core.database import SessionLocal
+from app.schemas.task import TaskIdsRequest
+from app.crud.task import get_tasks_by_ids
+from app.services.tex_export import build_tex_zip, build_standalone_tex
 
 router = APIRouter(prefix="/export", tags=["export"])
 
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 @router.post("/tex", response_class=StreamingResponse)
-async def export_tex(
-    filters: TaskFilter
+def export_tex(
+    payload: TaskIdsRequest,
+    db: Session = Depends(get_db),
 ):
-    tasks = await get_tasks_for_export(filters)
+    tasks = get_tasks_by_ids(db, payload.task_ids)
+    if not tasks:
+        raise HTTPException(status_code=404, detail="Задачи не найдены")
+
     buf = build_tex_zip(tasks, meta=None, zip_name="tasks_tex.zip")
     headers = {
         "Content-Disposition": 'attachment; filename="tasks_tex.zip"'
     }
     return StreamingResponse(buf, media_type="application/zip", headers=headers)
+
+
+@router.post("/tex/file", response_class=StreamingResponse)
+def export_tex_file(
+    payload: TaskIdsRequest,
+    db: Session = Depends(get_db),
+):
+    """Один самодостаточный .tex файл (шапка вшита внутрь) — кнопка "Скачать LaTeX"."""
+    tasks = get_tasks_by_ids(db, payload.task_ids)
+    if not tasks:
+        raise HTTPException(status_code=404, detail="Задачи не найдены")
+
+    content = build_standalone_tex(tasks)
+    buf = BytesIO(content.encode("utf-8"))
+    headers = {
+        "Content-Disposition": 'attachment; filename="astro-tasks.tex"'
+    }
+    return StreamingResponse(buf, media_type="application/x-tex", headers=headers)

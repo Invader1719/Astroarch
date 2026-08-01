@@ -38,6 +38,7 @@ Thumbs.db
 *.log
 *.zip
 *.pdf
+backend/generated/
 # Генерация TeX — исходники коммитим, скомпилированные PDF — нет
 *.aux
 *.out

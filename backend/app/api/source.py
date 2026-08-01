@@ -4,7 +4,7 @@ from typing import List
 from app.core.database import SessionLocal
 from app.schemas.source import SourceCreate, SourceOut
 from app.crud import source as crud_source
-from app.models.source import Source  # чтобы достать grade напрямую
+from app.models.task import Task  # grade — атрибут задачи, не источника
 
 router = APIRouter()
 
@@ -25,5 +25,5 @@ def get_sources(db: Session = Depends(get_db)):
 
 @router.get("/grades/", response_model=List[int])
 def get_grades(db: Session = Depends(get_db)):
-    grades = db.query(Source.grade).distinct().all()
-    return [g[0] for g in grades if g[0] is not None]
+    grades = db.query(Task.grade).distinct().all()
+    return sorted(g[0] for g in grades if g[0] is not None)

@@ -32,6 +32,7 @@ class TaskBase(BaseModel):
     solution: Optional[str] = None
     answer: Optional[str] = None
     difficulty: int
+    grade: Optional[int] = None
     source_id: int
     author_id: Optional[int] = None                # ← НОВОЕ поле
     topic_ids: List[int] = Field(default_factory=list)
@@ -45,6 +46,7 @@ class TaskOut(BaseModel):
     id: int
     text: str
     difficulty: int
+    grade: Optional[int] = None
     created_at: datetime
     solution: Optional[str] = None
     answer: Optional[str] = None
@@ -65,3 +67,8 @@ class TaskFilter(BaseModel):
     grade: Optional[int] = None
     difficulty_min: Optional[int] = None
     difficulty_max: Optional[int] = None
+
+
+class TaskIdsRequest(BaseModel):
+    """Список id выбранных пользователем задач — для экспорта в TeX/PDF."""
+    task_ids: List[int] = Field(default_factory=list)

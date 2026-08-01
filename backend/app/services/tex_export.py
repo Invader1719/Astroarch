@@ -88,20 +88,20 @@ def tex_escape(text: Optional[str]) -> str:
 # ===== 3) Строим main.tex по задачам =====
 def build_source_label(task) -> str:
     """
-    Собираем подпись источника. Настрой под свою модель.
-    Ожидается, что у task есть .source с полями name/year/stage/grade (если нет — адаптируй).
+    Собираем подпись источника: название/этап источника + класс задачи
+    (класс — атрибут самой задачи, а не источника, см. app/models/task.py).
     """
+    parts = []
     if getattr(task, "source", None):
-        parts = []
-        # Примеры — меняй под свои поля
         if getattr(task.source, "name", None):
             parts.append(str(task.source.name))
-        if getattr(task.source, "stage", None):
-            parts.append(str(task.source.stage))
-        if getattr(task.source, "grade", None):
-            parts.append(str(task.source.grade))
+        if getattr(task.source, "round", None):
+            parts.append(str(task.source.round))
         if getattr(task.source, "year", None):
             parts.append(str(task.source.year))
+    if getattr(task, "grade", None):
+        parts.append(f"{task.grade} класс")
+    if parts:
         return ", ".join(parts)
     # Фоллбек, если источник хранится как текстовое поле
     if getattr(task, "source_text", None):
@@ -119,7 +119,8 @@ def format_task_block(idx: int, task) -> str:
     prefix = rf"\noindent\textbf{{Задача {idx}.}}"
     if source_label:
         prefix += rf" \source{{{tex_escape(source_label)}}}"
-    statement = tex_escape(getattr(task, "statement", "") or getattr(task, "text", ""))
+    # task.text уже хранится как LaTeX-код (см. app/seed_data.py), поэтому не экранируем
+    statement = getattr(task, "statement", "") or getattr(task, "text", "")
     return prefix + " " + statement + "\n\\vspace{0.5em}\n"
 
 
@@ -136,6 +137,22 @@ def build_main_tex(tasks: Iterable, meta: Optional[Dict[str, str]] = None) -> st
     return (
         r"\documentclass[a4paper,12pt]{article}" + "\n"
         r"\input{header.tex}" + "\n\n"
+        r"\begin{document}" + "\n\n"
+        f"{body}\n"
+        r"\end{document}" + "\n"
+    )
+
+
+def build_standalone_tex(tasks: Iterable, meta: Optional[Dict[str, str]] = None) -> str:
+    """
+    Один самодостаточный .tex файл — шапка вшита прямо в документ, без
+    отдельного header.tex (для кнопки "Скачать LaTeX", в отличие от
+    build_tex_zip, который кладёт шапку отдельным файлом в архив).
+    """
+    body = "".join(format_task_block(i, t) for i, t in enumerate(tasks, start=1))
+    return (
+        r"\documentclass[a4paper,12pt]{article}" + "\n"
+        + HEADER_TEX + "\n\n"
         r"\begin{document}" + "\n\n"
         f"{body}\n"
         r"\end{document}" + "\n"

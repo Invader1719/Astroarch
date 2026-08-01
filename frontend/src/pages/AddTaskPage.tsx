@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-type Source = { id: number; name: string; year?: number | null; grade?: number | null };
+type Source = { id: number; name: string; year?: number | null; round?: string | null };
 type Topic = { id: number; name: string };
 type Subtopic = { id: number; name: string; topic_id: number };
 type Author = { id: number; name: string };
@@ -16,6 +16,7 @@ export default function AddTaskPage() {
   const [solution, setSolution] = useState("");
   const [answer, setAnswer] = useState("");
   const [difficulty, setDifficulty] = useState(1);
+  const [grade, setGrade] = useState<number | "">("");
   const [sourceId, setSourceId] = useState<number | "">("");
   const [authorId, setAuthorId] = useState<number | "">("");
   const [topicIds, setTopicIds] = useState<number[]>([]);
@@ -87,6 +88,7 @@ export default function AddTaskPage() {
         solution: solution || null,
         answer: answer || null,
         difficulty: Number(difficulty),
+        grade: grade === "" ? null : Number(grade),
         source_id: Number(sourceId),
         author_id: authorId === "" ? null : Number(authorId), // ← отправляем автора, если выбран
         topic_ids: topicIds,
@@ -171,6 +173,19 @@ export default function AddTaskPage() {
           />
         </div>
 
+        {/* Класс */}
+        <div>
+          <label className="block mb-1">Класс (необязательно)</label>
+          <input
+            type="number"
+            min={1}
+            max={11}
+            value={grade}
+            onChange={(e) => setGrade(e.target.value ? Number(e.target.value) : "")}
+            className="w-full bg-zinc-900 text-white border border-white/20 rounded px-3 py-2"
+          />
+        </div>
+
         {/* Источник */}
         <div>
           <label className="block mb-1">Источник</label>
@@ -184,7 +199,7 @@ export default function AddTaskPage() {
             {sources.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
-                {s.year ? `, ${s.year}` : ""}{s.grade ? `, ${s.grade} кл.` : ""}
+                {s.round ? `, ${s.round}` : ""}{s.year ? `, ${s.year}` : ""}
               </option>
             ))}
           </select>

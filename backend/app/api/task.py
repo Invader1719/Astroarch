@@ -24,6 +24,10 @@ def read_tasks(
     grades: Optional[List[int]] = Query(None),
     topic_ids: Optional[List[int]] = Query(None),
     subtopic_ids: Optional[List[int]] = Query(None),
+    difficulty_min: Optional[int] = Query(None),
+    difficulty_max: Optional[int] = Query(None),
+    sort_by: Optional[str] = Query(None, pattern="^(difficulty|year|created_at)$"),
+    sort_dir: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ):
     return crud_task.get_all_tasks(
@@ -33,6 +37,10 @@ def read_tasks(
         grades=grades,
         topic_ids=topic_ids,
         subtopic_ids=subtopic_ids,
+        difficulty_min=difficulty_min,
+        difficulty_max=difficulty_max,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
     )
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
