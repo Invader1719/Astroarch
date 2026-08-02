@@ -30,7 +30,13 @@ def export_tex(
     if not tasks:
         raise HTTPException(status_code=404, detail="Задачи не найдены")
 
-    buf = build_tex_zip(tasks, meta=None, zip_name="tasks_tex.zip")
+    buf = build_tex_zip(
+        tasks,
+        meta=None,
+        zip_name="tasks_tex.zip",
+        include_source=payload.include_source,
+        include_answer=payload.include_answer,
+    )
     headers = {
         "Content-Disposition": 'attachment; filename="tasks_tex.zip"'
     }
@@ -47,7 +53,11 @@ def export_tex_file(
     if not tasks:
         raise HTTPException(status_code=404, detail="Задачи не найдены")
 
-    content = build_standalone_tex(tasks)
+    content = build_standalone_tex(
+        tasks,
+        include_source=payload.include_source,
+        include_answer=payload.include_answer,
+    )
     buf = BytesIO(content.encode("utf-8"))
     headers = {
         "Content-Disposition": 'attachment; filename="astro-tasks.tex"'

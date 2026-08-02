@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import SessionLocal
 from app.schemas.subtopic import SubtopicCreate, SubtopicOut
 from app.crud import subtopic as crud_subtopic
+from app.dependencies.auth import require_role
+from app.models.user import User
 
 router = APIRouter()
 
@@ -15,7 +17,11 @@ def get_db():
         db.close()
 
 @router.post("/subtopics/", response_model=SubtopicOut)
-def create_subtopic(subtopic: SubtopicCreate, db: Session = Depends(get_db)):
+def create_subtopic(
+    subtopic: SubtopicCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Security(require_role("admin", "founder")),
+):
     return crud_subtopic.create_subtopic(db, subtopic)
 
 @router.get("/subtopics/", response_model=List[SubtopicOut])

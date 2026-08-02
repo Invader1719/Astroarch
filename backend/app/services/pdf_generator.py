@@ -11,9 +11,9 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
-def generate_tex_file(tasks: List[Task], tex_path: str):
+def generate_tex_file(tasks: List[Task], tex_path: str, include_source: bool = True, include_answer: bool = True):
     template = env.get_template("base_template.tex")
-    tex_content = template.render(tasks=tasks)
+    tex_content = template.render(tasks=tasks, include_source=include_source, include_answer=include_answer)
     with open(tex_path, "w", encoding="utf-8") as f:
         f.write(tex_content)
 

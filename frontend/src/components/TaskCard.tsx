@@ -5,15 +5,17 @@ import LatexContent from "@/components/LatexContent"
 import CopyLatexButton from "@/components/CopyLatexButton"
 
 type TaskCardProps = {
-  title: string
+  title?: string    // короткое название задачи (необязательно)
+  text: string       // условие задачи
   tags: string[]
   year: number
   id: number
   selected: boolean
   toggleSelect: (id: number) => void
+  authorName?: string
 }
 
-export default function TaskCard({ title, tags, year, id, selected, toggleSelect }: TaskCardProps) {
+export default function TaskCard({ title, text, tags, id, selected, toggleSelect }: TaskCardProps) {
   return (
     <Card className="mb-4">
       <CardContent className="p-4">
@@ -25,8 +27,12 @@ export default function TaskCard({ title, tags, year, id, selected, toggleSelect
             className="mt-1"
           />
           <div className="flex-1">
-            <LatexContent text={title} className="text-xl font-semibold" />
-            <p className="text-sm text-muted-foreground mb-2">Год: {year}</p>
+            {title && (
+              <p className="text-base font-semibold uppercase tracking-wider text-blue-300/70 mb-1">
+                {title}
+              </p>
+            )}
+            <LatexContent text={text} className="text-xl font-semibold mb-2" />
             <div className="flex flex-wrap gap-2 mb-3">
               {tags.map((tag, i) => (
                 <span key={i} className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -38,7 +44,7 @@ export default function TaskCard({ title, tags, year, id, selected, toggleSelect
               <Button variant="outline" asChild>
                 <Link to={`/task/${id}`}>Открыть</Link>
               </Button>
-              <CopyLatexButton text={title} />
+              <CopyLatexButton text={text} />
             </div>
           </div>
         </div>

@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import SessionLocal
 from app.schemas.topic import TopicCreate, TopicOut
 from app.crud import topic as crud_topic
+from app.dependencies.auth import require_role
+from app.models.user import User
 
 router = APIRouter()
 
@@ -15,7 +17,11 @@ def get_db():
         db.close()
 
 @router.post("/topics/", response_model=TopicOut)
-def create_topic(topic: TopicCreate, db: Session = Depends(get_db)):
+def create_topic(
+    topic: TopicCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Security(require_role("admin", "founder")),
+):
     return crud_topic.create_topic(db, topic)
 
 @router.get("/topics/", response_model=List[TopicOut])

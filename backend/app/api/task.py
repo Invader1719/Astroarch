@@ -19,29 +19,44 @@ def get_db():
 
 @router.get("/tasks/", response_model=List[TaskOut])
 def read_tasks(
-    year: Optional[int] = Query(None),
+    search: Optional[str] = Query(None),
     sources: Optional[List[str]] = Query(None),
     grades: Optional[List[int]] = Query(None),
     topic_ids: Optional[List[int]] = Query(None),
     subtopic_ids: Optional[List[int]] = Query(None),
+    author_ids: Optional[List[int]] = Query(None),
     difficulty_min: Optional[int] = Query(None),
     difficulty_max: Optional[int] = Query(None),
-    sort_by: Optional[str] = Query(None, pattern="^(difficulty|year|created_at)$"),
+    difficulties: Optional[List[int]] = Query(None),
+    year_min: Optional[int] = Query(None),
+    year_max: Optional[int] = Query(None),
+    years: Optional[List[int]] = Query(None),
+    sort_by: Optional[str] = Query(None, pattern="^(difficulty|year|created_at|author)$"),
     sort_dir: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ):
     return crud_task.get_all_tasks(
         db,
-        year=year,
+        search=search,
         sources=sources,
         grades=grades,
         topic_ids=topic_ids,
         subtopic_ids=subtopic_ids,
+        author_ids=author_ids,
         difficulty_min=difficulty_min,
         difficulty_max=difficulty_max,
+        difficulties=difficulties,
+        year_min=year_min,
+        year_max=year_max,
+        years=years,
         sort_by=sort_by,
         sort_dir=sort_dir,
     )
+
+@router.get("/tasks/years/", response_model=List[int])
+def get_task_years(db: Session = Depends(get_db)):
+    """Уникальные годы олимпиады (Task.year) среди существующих задач, вне зависимости от фильтров."""
+    return crud_task.get_distinct_years(db)
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
 def read_task(task_id: int, db: Session = Depends(get_db)):
@@ -54,6 +69,6 @@ def read_task(task_id: int, db: Session = Depends(get_db)):
 def create_task(
     task: TaskCreate,
     db: Session = Depends(get_db),
-    current_user: User = Security(require_role("admin", "moderator")),
+    current_user: User = Security(require_role("admin", "moderator", "founder")),
 ):
     return crud_task.create_task(db, task, current_user.id)

@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react"
+import { useAuth } from "@/context/AuthContext"
 
 type Topic = { id: number; name: string }
 type Author = { id: number; name: string }
+type Source = { id: number; name: string }
 
 export default function AdminPanel() {
+  const { token } = useAuth()
+  const authHeaders = { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+
   const [topics, setTopics] = useState<Topic[]>([])
   const [topicName, setTopicName] = useState("")
   const [subtopicName, setSubtopicName] = useState("")
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null)
   const [authorName, setAuthorName] = useState("")
 
-  // Загружаем список тем при старте
+  const [sources, setSources] = useState<Source[]>([])
+  const [sourceName, setSourceName] = useState("")
+
+  // Загружаем список тем и источников при старте
   useEffect(() => {
     fetch("/api/topics/")
       .then(res => res.json())
       .then(setTopics)
+      .catch(console.error)
+    fetch("/api/sources/")
+      .then(res => res.json())
+      .then(setSources)
       .catch(console.error)
   }, [])
 
@@ -23,7 +35,7 @@ export default function AdminPanel() {
     if (!topicName.trim()) return
     const res = await fetch("/api/topics/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: topicName })
     })
     if (res.ok) {
@@ -38,11 +50,26 @@ export default function AdminPanel() {
     if (!subtopicName.trim() || !selectedTopicId) return
     const res = await fetch("/api/subtopics/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: subtopicName, topic_id: selectedTopicId })
     })
     if (res.ok) {
       setSubtopicName("")
+    }
+  }
+
+  // Добавление источника (просто место/олимпиада, например "ВсОШ. Закл", "ВсОШ. Рег")
+  const addSource = async () => {
+    if (!sourceName.trim()) return
+    const res = await fetch("/api/sources/", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ name: sourceName })
+    })
+    if (res.ok) {
+      const created = await res.json()
+      setSources(prev => [...prev, created])
+      setSourceName("")
     }
   }
 
@@ -51,7 +78,7 @@ export default function AdminPanel() {
     if (!authorName.trim()) return
     const res = await fetch("/api/authors/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: authorName })
     })
     if (res.ok) {
@@ -61,7 +88,37 @@ export default function AdminPanel() {
 
   return (
     <div className="p-8 space-y-8 text-white">
-      <h1 className="text-3xl font-bold">Панель администратора</h1>
+      <h1 className="text-3xl font-bold">Справочники</h1>
+      <p className="text-white/60 -mt-6">
+        Здесь добавляются источники (олимпиады), темы, подтемы и авторы — то, из чего собираются задачи.
+      </p>
+
+      {/* Добавить источник (олимпиаду) */}
+      <div className="bg-white/10 p-4 rounded-lg">
+        <h2 className="text-xl font-semibold mb-2">Добавить источник (олимпиаду)</h2>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <input
+            type="text"
+            value={sourceName}
+            onChange={(e) => setSourceName(e.target.value)}
+            placeholder="Название (например: ВсОШ. Закл)"
+            className="text-black px-2 py-1 rounded"
+          />
+          <button
+            onClick={addSource}
+            className="bg-green-500 px-3 py-1 rounded hover:bg-green-600"
+          >
+            Добавить
+          </button>
+        </div>
+        {sources.length > 0 && (
+          <ul className="text-sm text-white/70 space-y-1">
+            {sources.map(s => (
+              <li key={s.id}>{s.name}</li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* Добавить тему */}
       <div className="bg-white/10 p-4 rounded-lg">

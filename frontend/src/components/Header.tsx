@@ -20,7 +20,7 @@ export default function Header() {
       </NavLink>
 
       {/* Кнопка "Добавить задачу" видна админу и модератору */}
-      {user && ["admin", "moderator"].includes(user.role) && (
+      {user && ["admin", "moderator", "founder"].includes(user.role) && (
         <NavLink
           to="/add-task"
           className={({ isActive }) => `${baseLink} ${isActive ? active : ""}`}
@@ -29,15 +29,25 @@ export default function Header() {
         </NavLink>
       )}
 
-      {/* Кнопка "Админ‑панель" только для admin */}
-      {user?.role === "admin" && (
+      {/* Кнопка "Справочники" (источники/темы/подтемы/авторы) только для admin */}
+      {user && ["admin", "founder"].includes(user.role) && (
         <NavLink
           to="/admin"
+          className={({ isActive }) => `${baseLink} ${isActive ? active : ""}`}
+        >
+          Справочники
+        </NavLink>
+      )}
+
+      {/* Кнопка "Пользователи" — управление ролями, только admin/founder */}
+      {user && ["admin", "founder"].includes(user.role) && (
+        <NavLink
+          to="/users"
           className={({ isActive }) =>
             `${baseLink} ${isActive ? active : ""} text-yellow-300`
           }
         >
-          Админ‑панель
+          Пользователи
         </NavLink>
       )}
 

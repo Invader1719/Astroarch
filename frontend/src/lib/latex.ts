@@ -63,11 +63,15 @@ export function renderLatexHtml(raw: string): string {
       .map((r) => {
         // на этом шаге "&" уже экранирован в "&amp;" (см. п.1) — делим по нему
         const cells = r.split("&amp;").map((c) => c.trim())
-        const tds = cells.map((c) => "<td class=\"pr-4 py-0.5\">" + c + "</td>").join("")
+        const tds = cells
+          .map((c) => "<td class=\"border border-white/25 px-3 py-1.5\">" + c + "</td>")
+          .join("")
         return "<tr>" + tds + "</tr>"
       })
       .join("")
-    return stash("<table class=\"my-2 border-collapse mx-auto\">" + trs + "</table>")
+    return stash(
+      "<table class=\"my-3 border-collapse border border-white/25 mx-auto text-sm\">" + trs + "</table>"
+    )
   })
 
   // 5) простое форматирование

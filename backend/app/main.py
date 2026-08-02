@@ -24,7 +24,8 @@ from app.api import (
     source as source_api,
     subtopic as subtopic_api,
     generate as generate_api,
-    author as author_api
+    author as author_api,
+    user as user_api
 )
 
 app = FastAPI()
@@ -43,6 +44,7 @@ app.include_router(subtopic_api.router)
 app.include_router(generate_api.router)
 app.include_router(export_api.router)
 app.include_router(author_api.router)
+app.include_router(user_api.router)
 app.include_router(auth.router, prefix="/auth")
 
 app.add_middleware(

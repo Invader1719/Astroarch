@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import SessionLocal
 from app.schemas.source import SourceCreate, SourceOut
 from app.crud import source as crud_source
 from app.models.task import Task  # grade — атрибут задачи, не источника
+from app.dependencies.auth import require_role
+from app.models.user import User
 
 router = APIRouter()
 
@@ -16,7 +18,11 @@ def get_db():
         db.close()
 
 @router.post("/sources/", response_model=SourceOut)
-def create_source(source: SourceCreate, db: Session = Depends(get_db)):
+def create_source(
+    source: SourceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Security(require_role("admin", "founder")),
+):
     return crud_source.create_source(db, source)
 
 @router.get("/sources/", response_model=List[SourceOut])

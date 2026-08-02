@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import SessionLocal
 from app.schemas.author import AuthorCreate, AuthorOut
 from app.crud import author as crud_author
+from app.dependencies.auth import require_role
+from app.models.user import User
 
 router = APIRouter(tags=["authors"])
 
@@ -20,7 +22,11 @@ def list_authors(db: Session = Depends(get_db)):
     return crud_author.get_authors(db)
 
 @router.post("/authors/", response_model=AuthorOut, status_code=status.HTTP_201_CREATED)
-def add_author(data: AuthorCreate, db: Session = Depends(get_db)):
+def add_author(
+    data: AuthorCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Security(require_role("admin", "founder")),
+):
     name = (data.name or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Имя автора не может быть пустым")

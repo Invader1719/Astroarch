@@ -10,9 +10,6 @@ class AuthorShort(BaseModel):
 class SourceShort(BaseModel):
     id: int
     name: str
-    year: Optional[int] = None
-    round: Optional[str] = None
-    grade: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
 
 class TopicShort(BaseModel):
@@ -28,13 +25,15 @@ class SubtopicShort(BaseModel):
 
 # --- входные модели ---
 class TaskBase(BaseModel):
+    title: Optional[str] = None                     # короткое название — необязательно
     text: str
     solution: Optional[str] = None
     answer: Optional[str] = None
     difficulty: int
-    grade: Optional[int] = None
+    grade: int                                      # класс — обязателен
+    year: int                                       # год олимпиады — обязателен
     source_id: int
-    author_id: Optional[int] = None                # ← НОВОЕ поле
+    author_id: Optional[int] = None
     topic_ids: List[int] = Field(default_factory=list)
     subtopic_ids: List[int] = Field(default_factory=list)
 
@@ -44,9 +43,11 @@ class TaskCreate(TaskBase):
 # --- выходная модель ---
 class TaskOut(BaseModel):
     id: int
+    title: Optional[str] = None
     text: str
     difficulty: int
-    grade: Optional[int] = None
+    grade: int
+    year: int
     created_at: datetime
     solution: Optional[str] = None
     answer: Optional[str] = None
@@ -72,3 +73,5 @@ class TaskFilter(BaseModel):
 class TaskIdsRequest(BaseModel):
     """Список id выбранных пользователем задач — для экспорта в TeX/PDF."""
     task_ids: List[int] = Field(default_factory=list)
+    include_source: bool = True   # добавлять ли подпись источника (олимпиада/год/класс)
+    include_answer: bool = True   # добавлять ли ответ

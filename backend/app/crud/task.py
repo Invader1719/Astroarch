@@ -1,32 +1,40 @@
 # backend/app/crud/task.py
 from typing import List, Optional
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.task import Task
 from app.models.topic import Topic
 from app.models.subtopic import Subtopic
 from app.models.source import Source
+from app.models.author import Author
 from app.models.user import User
 from app.schemas.task import TaskCreate
 
 
 SORTABLE_FIELDS = {
     "difficulty": Task.difficulty,
-    "year": Source.year,
+    "year": Task.year,
     "created_at": Task.created_at,
+    "author": Author.name,
 }
 
 
 def get_all_tasks(
     db: Session,
-    year: Optional[int] = None,
+    search: Optional[str] = None,          # поиск по тексту условия задачи
     sources: Optional[List[str]] = None,   # названия олимпиад (Source.name)
     grades: Optional[List[int]] = None,    # классы (Task.grade)
     topic_ids: Optional[List[int]] = None,
     subtopic_ids: Optional[List[int]] = None,
+    author_ids: Optional[List[int]] = None,
     difficulty_min: Optional[int] = None,
     difficulty_max: Optional[int] = None,
-    sort_by: Optional[str] = None,         # "difficulty" | "year" | "created_at"
+    difficulties: Optional[List[int]] = None,   # конкретные значения сложности (напр. 1, 3, 6)
+    year_min: Optional[int] = None,        # диапазон года олимпиады (Task.year)
+    year_max: Optional[int] = None,
+    years: Optional[List[int]] = None,     # конкретные годы олимпиады
+    sort_by: Optional[str] = None,         # "difficulty" | "year" | "created_at" | "author"
     sort_dir: str = "asc",                 # "asc" | "desc"
 ):
     """
@@ -37,21 +45,35 @@ def get_all_tasks(
         db.query(Task)
         .options(
             joinedload(Task.source),
+            joinedload(Task.author),
             joinedload(Task.topics),
             joinedload(Task.subtopics),
         )
     )
 
-    needs_source_join = bool(sources or year is not None or sort_by == "year")
-    if needs_source_join:
-        query = query.join(Task.source)
+    if search and search.strip():
+        pattern = f"%{search.strip()}%"
+        query = query.filter(or_(Task.text.ilike(pattern), Task.title.ilike(pattern)))
 
-    # --- фильтры по источнику (олимпиада/год) ---
     if sources:
-        query = query.filter(Source.name.in_(sources))
+        query = query.join(Task.source).filter(Source.name.in_(sources))
 
-    if year is not None:
-        query = query.filter(Source.year == year)
+    needs_author_join = bool(author_ids or sort_by == "author")
+    if needs_author_join:
+        # LEFT JOIN — у задачи автор необязателен (author_id nullable),
+        # обычный join потерял бы все задачи без автора при сортировке
+        query = query.join(Task.author, isouter=True)
+
+    # --- фильтр по конкретным годам олимпиады (приоритетнее диапазона; атрибут задачи) ---
+    if years:
+        query = query.filter(Task.year.in_(years))
+    else:
+        # --- фильтр по диапазону годов олимпиады ---
+        if year_min is not None:
+            query = query.filter(Task.year >= year_min)
+
+        if year_max is not None:
+            query = query.filter(Task.year <= year_max)
 
     # --- фильтр по классу (атрибут самой задачи) ---
     if grades:
@@ -64,12 +86,20 @@ def get_all_tasks(
     if subtopic_ids:
         query = query.join(Task.subtopics).filter(Subtopic.id.in_(subtopic_ids))
 
-    # --- фильтр по диапазону сложности ---
-    if difficulty_min is not None:
-        query = query.filter(Task.difficulty >= difficulty_min)
+    # --- фильтр по автору ---
+    if author_ids:
+        query = query.filter(Author.id.in_(author_ids))
 
-    if difficulty_max is not None:
-        query = query.filter(Task.difficulty <= difficulty_max)
+    # --- фильтр по конкретным значениям сложности (приоритетнее диапазона) ---
+    if difficulties:
+        query = query.filter(Task.difficulty.in_(difficulties))
+    else:
+        # --- фильтр по диапазону сложности ---
+        if difficulty_min is not None:
+            query = query.filter(Task.difficulty >= difficulty_min)
+
+        if difficulty_max is not None:
+            query = query.filter(Task.difficulty <= difficulty_max)
 
     # возможны дубли из-за нескольких JOIN'ов
     query = query.distinct()
@@ -81,11 +111,18 @@ def get_all_tasks(
     return query.all()
 
 
+def get_distinct_years(db: Session) -> List[int]:
+    """Уникальные годы олимпиады (Task.year) среди существующих задач, без учёта фильтров."""
+    rows = db.query(Task.year).distinct().all()
+    return sorted(r[0] for r in rows if r[0] is not None)
+
+
 def get_task(db: Session, task_id: int):
     return (
         db.query(Task)
         .options(
             joinedload(Task.source),
+            joinedload(Task.author),
             joinedload(Task.topics),
             joinedload(Task.subtopics),
         )
@@ -100,11 +137,13 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
     created_by_user_id — внутренний автор (кто добавил в БД).
     """
     db_task = Task(
+        title=task.title,
         text=task.text,
         solution=task.solution,
         answer=task.answer,
         difficulty=task.difficulty,
         grade=task.grade,
+        year=task.year,
         source_id=task.source_id,
         author_id=getattr(task, "author_id", None),
         created_by_user_id=user_id,
@@ -153,6 +192,7 @@ def get_tasks_by_ids(db: Session, task_ids: List[int]):
         db.query(Task)
         .options(
             joinedload(Task.source),
+            joinedload(Task.author),
             joinedload(Task.topics),
             joinedload(Task.subtopics),
         )

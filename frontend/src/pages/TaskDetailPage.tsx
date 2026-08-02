@@ -5,15 +5,15 @@ import CopyLatexButton from "@/components/CopyLatexButton"
 
 interface Task {
   id: number
+  title?: string
   text: string
   solution?: string
   answer?: string
-  grade?: number
+  grade: number
+  year: number
   author?: { id: number; name: string } | null
   source?: {
     name: string
-    year?: number
-    round?: string
   }
 }
 
@@ -35,6 +35,11 @@ export default function TaskDetailPage() {
       <Link to="/" className="text-blue-400 hover:underline">← Назад к списку задач</Link>
 
       <div className="space-y-2">
+        {task.title && (
+          <p className="text-sm font-semibold uppercase tracking-wider text-blue-300/70">
+            {task.title}
+          </p>
+        )}
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">Условие задачи</h1>
           <CopyLatexButton text={task.text} />
@@ -43,10 +48,7 @@ export default function TaskDetailPage() {
 
         {task.source && (
           <p className="text-sm text-white/70">
-            Источник: {task.source.name}
-            {task.source.round ? `, ${task.source.round}` : ""}
-            {task.source.year ? `, ${task.source.year}` : ""}
-            {task.grade ? `, ${task.grade} класс` : ""}
+            Источник: {task.source.name}, {task.year}, {task.grade} класс
           </p>
         )}
 

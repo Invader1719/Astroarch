@@ -6,6 +6,7 @@ import AddTaskPage from "./pages/AddTaskPage";
 import ProfilePage from "./pages/ProfilePage";
 import TaskDetailPage from "./pages/TaskDetailPage";
 import AdminPanel from "./pages/AdminPanel";
+import UsersAdminPage from "./pages/UsersAdminPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Header from "@/components/Header"; // ← новая шапка
 
@@ -25,7 +26,7 @@ export default function App() {
         <Route
           path="/add-task"
           element={
-            <ProtectedRoute roles={["admin", "moderator"]}>
+            <ProtectedRoute roles={["admin", "moderator", "founder"]}>
               <AddTaskPage />
             </ProtectedRoute>
           }
@@ -43,8 +44,17 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute roles={["admin"]}>
+            <ProtectedRoute roles={["admin", "founder"]}>
               <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute roles={["admin", "founder"]}>
+              <UsersAdminPage />
             </ProtectedRoute>
           }
         />

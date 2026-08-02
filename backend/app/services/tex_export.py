@@ -88,17 +88,14 @@ def tex_escape(text: Optional[str]) -> str:
 # ===== 3) Строим main.tex по задачам =====
 def build_source_label(task) -> str:
     """
-    Собираем подпись источника: название/этап источника + класс задачи
-    (класс — атрибут самой задачи, а не источника, см. app/models/task.py).
+    Собираем подпись источника: название источника + год + класс задачи
+    (год и класс — атрибуты самой задачи, а не источника, см. app/models/task.py).
     """
     parts = []
-    if getattr(task, "source", None):
-        if getattr(task.source, "name", None):
-            parts.append(str(task.source.name))
-        if getattr(task.source, "round", None):
-            parts.append(str(task.source.round))
-        if getattr(task.source, "year", None):
-            parts.append(str(task.source.year))
+    if getattr(task, "source", None) and getattr(task.source, "name", None):
+        parts.append(str(task.source.name))
+    if getattr(task, "year", None):
+        parts.append(str(task.year))
     if getattr(task, "grade", None):
         parts.append(f"{task.grade} класс")
     if parts:
@@ -109,29 +106,41 @@ def build_source_label(task) -> str:
     return ""
 
 
-def format_task_block(idx: int, task) -> str:
+def format_task_block(idx: int, task, include_source: bool = True, include_answer: bool = True) -> str:
     """
     Генерирует блок вида:
     \noindent\textbf{Задача 1.} \source{...} Условие...
     \vspace{0.5em}
     """
-    source_label = build_source_label(task)
+    source_label = build_source_label(task) if include_source else ""
     prefix = rf"\noindent\textbf{{Задача {idx}.}}"
+    title = getattr(task, "title", None)
+    if title:
+        prefix += rf" \textbf{{{tex_escape(title)}}}."
     if source_label:
         prefix += rf" \source{{{tex_escape(source_label)}}}"
-    # task.text уже хранится как LaTeX-код (см. app/seed_data.py), поэтому не экранируем
+    # task.text/answer уже хранятся как LaTeX-код (см. app/seed_data.py), поэтому не экранируем
     statement = getattr(task, "statement", "") or getattr(task, "text", "")
-    return prefix + " " + statement + "\n\\vspace{0.5em}\n"
+    block = prefix + " " + statement
+    answer = getattr(task, "answer", None)
+    if include_answer and answer:
+        block += rf"\\[0.5em] \textit{{Ответ: {answer}}}"
+    return block + "\n\\vspace{0.5em}\n"
 
 
-def build_main_tex(tasks: Iterable, meta: Optional[Dict[str, str]] = None) -> str:
+def build_main_tex(
+    tasks: Iterable,
+    meta: Optional[Dict[str, str]] = None,
+    include_source: bool = True,
+    include_answer: bool = True,
+) -> str:
     """
     Собираем итоговый main.tex. meta можно потом использовать для динамических колонтитулов.
     """
     # Хочешь — сюда добавь динамику колонтитулов, прописав \lhead и т.д. через \fancypagestyle
     tasks_tex = []
     for i, t in enumerate(tasks, start=1):
-        tasks_tex.append(format_task_block(i, t))
+        tasks_tex.append(format_task_block(i, t, include_source, include_answer))
 
     body = "".join(tasks_tex)
     return (
@@ -143,13 +152,21 @@ def build_main_tex(tasks: Iterable, meta: Optional[Dict[str, str]] = None) -> st
     )
 
 
-def build_standalone_tex(tasks: Iterable, meta: Optional[Dict[str, str]] = None) -> str:
+def build_standalone_tex(
+    tasks: Iterable,
+    meta: Optional[Dict[str, str]] = None,
+    include_source: bool = True,
+    include_answer: bool = True,
+) -> str:
     """
     Один самодостаточный .tex файл — шапка вшита прямо в документ, без
     отдельного header.tex (для кнопки "Скачать LaTeX", в отличие от
     build_tex_zip, который кладёт шапку отдельным файлом в архив).
     """
-    body = "".join(format_task_block(i, t) for i, t in enumerate(tasks, start=1))
+    body = "".join(
+        format_task_block(i, t, include_source, include_answer)
+        for i, t in enumerate(tasks, start=1)
+    )
     return (
         r"\documentclass[a4paper,12pt]{article}" + "\n"
         + HEADER_TEX + "\n\n"
@@ -160,10 +177,16 @@ def build_standalone_tex(tasks: Iterable, meta: Optional[Dict[str, str]] = None)
 
 
 # ===== 4) Собираем ZIP =====
-def build_tex_zip(tasks: Iterable, meta: Optional[Dict[str, str]] = None, zip_name: str = "tasks_tex.zip") -> BytesIO:
+def build_tex_zip(
+    tasks: Iterable,
+    meta: Optional[Dict[str, str]] = None,
+    zip_name: str = "tasks_tex.zip",
+    include_source: bool = True,
+    include_answer: bool = True,
+) -> BytesIO:
     buf = BytesIO()
     with ZipFile(buf, "w", ZIP_DEFLATED) as zf:
         zf.writestr("header.tex", HEADER_TEX + "\n")
-        zf.writestr("main.tex", build_main_tex(tasks, meta))
+        zf.writestr("main.tex", build_main_tex(tasks, meta, include_source, include_answer))
     buf.seek(0)
     return buf

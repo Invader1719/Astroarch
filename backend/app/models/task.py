@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -9,11 +9,13 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=True)  # короткое название задачи (необязательно), напр. "Улетающая звезда"
     text = Column(Text, nullable=False)
     solution = Column(Text, nullable=True)
     answer = Column(Text, nullable=True)
     difficulty = Column(Integer, nullable=False)
-    grade = Column(Integer, nullable=True)  # класс, для которого задача (9/10/11) — атрибут задачи, не источника
+    grade = Column(Integer, nullable=False)  # класс (9/10/11) — атрибут задачи, не источника
+    year = Column(Integer, nullable=False)   # год олимпиады — тоже атрибут задачи, не источника
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("authors.id"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())

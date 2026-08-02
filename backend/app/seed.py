@@ -9,7 +9,7 @@ from app.models.source import Source
 from app.models.topic import Topic
 from app.models.subtopic import Subtopic
 from app.models.task import Task
-from app.seed_data import SOURCES, TOPICS, TASKS
+from app.seed_data import SOURCES, SOURCE_YEARS, TOPICS, TASKS
 
 
 def seed_if_empty(db: Session) -> None:
@@ -41,7 +41,8 @@ def seed_if_empty(db: Session) -> None:
         task = Task(
             text=item["text"],
             difficulty=item["difficulty"],
-            grade=item.get("grade"),
+            grade=item["grade"],
+            year=SOURCE_YEARS[item["source_key"]],
             source_id=source_by_key[item["source_key"]].id,
         )
         db.add(task)
