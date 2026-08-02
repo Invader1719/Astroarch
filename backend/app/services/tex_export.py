@@ -124,7 +124,7 @@ def format_task_block(idx: int, task, include_source: bool = True, include_answe
     block = prefix + " " + statement
     answer = getattr(task, "answer", None)
     if include_answer and answer:
-        block += rf"\\[0.5em] \textit{{Ответ: {answer}}}"
+        block += "\n\n" + rf"\vspace{{0.5em}}\noindent{{\itshape Ответ: {answer}\par}}"
     return block + "\n\\vspace{0.5em}\n"
 
 

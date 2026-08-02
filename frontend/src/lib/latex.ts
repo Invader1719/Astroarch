@@ -2,9 +2,15 @@ import katex from "katex"
 
 // Рендерит одно матем. выражение в HTML через KaTeX.
 // throwOnError: false — битая формула не должна ронять всю страницу.
+// Символы, которых нет в наборе KaTeX по умолчанию, но которые встречаются
+// в текстах задач (см. app/seed_data.py на бэкенде).
+const KATEX_MACROS: Record<string, string> = {
+  "\\leftmoon": "\\text{☾}",
+}
+
 function renderMath(expr: string, displayMode: boolean): string {
   try {
-    return katex.renderToString(expr.trim(), { throwOnError: false, displayMode })
+    return katex.renderToString(expr.trim(), { throwOnError: false, displayMode, macros: KATEX_MACROS })
   } catch {
     return "<span class=\"text-red-400\">" + expr + "</span>"
   }
@@ -48,10 +54,23 @@ export function renderLatexHtml(raw: string): string {
   s = s.replace(/\\\{/g, "{")
   s = s.replace(/\\\}/g, "}")
 
-  // 3) нумерованные списки \begin{enumerate}...\item...\end{enumerate}
+  // 3) списки \begin{enumerate}...\item...\end{enumerate}
+  // \item может идти с кастомной меткой — \item[a)] текст — тогда нумеровать
+  // автоматически (через <ol>) нельзя, иначе метка задвоится ("1. a) текст").
   s = s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g, (_, body: string) => {
-    const items = body.split(/\\item/).map((x) => x.trim()).filter(Boolean)
-    const li = items.map((i) => "<li>" + i + "</li>").join("")
+    const rawItems = body.split(/\\item/).map((x) => x.trim()).filter(Boolean)
+    const items = rawItems.map((item) => {
+      const m = item.match(/^\[([^\]]*)\]\s*([\s\S]*)$/)
+      return m ? { label: m[1], content: m[2] } : { label: null as string | null, content: item }
+    })
+    const hasCustomLabels = items.some((i) => i.label !== null)
+    if (hasCustomLabels) {
+      const li = items
+        .map((i) => "<li>" + (i.label ? "<strong>" + i.label + "</strong> " : "") + i.content + "</li>")
+        .join("")
+      return stash("<ul class=\"list-none ml-6 space-y-1 my-2\">" + li + "</ul>")
+    }
+    const li = items.map((i) => "<li>" + i.content + "</li>").join("")
     return stash("<ol class=\"list-decimal ml-6 space-y-1 my-2\">" + li + "</ol>")
   })
 

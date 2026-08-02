@@ -56,11 +56,11 @@
 {{ task.text | safe }}
 
 {% if include_answer and task.answer %}
-\\[0.5em] \textit{Ответ: {{ task.answer | safe }}}
+\vspace{0.5em}\noindent{\itshape Ответ: {{ task.answer | safe }}\par}
 {% endif %}
 
 {% if task.solution %}
-\\[0.5em] \textit{Решение: {{ task.solution | safe }}}
+\vspace{0.5em}\noindent{\itshape Решение: {{ task.solution | safe }}\par}
 {% endif %}
 
 \vspace{1.5em}
