@@ -1,7 +1,9 @@
 # backend/app/core/security.py
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -11,7 +13,14 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
 
-SECRET_KEY = "CHANGE_ME_SUPER_SECRET"
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY не задан. Добавь его в backend/.env "
+        "(сгенерировать: python -c \"import secrets; print(secrets.token_hex(32))\")"
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 

@@ -184,6 +184,34 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
     return db_task
 
 
+def delete_task(db: Session, db_task: Task):
+    db.delete(db_task)
+    db.commit()
+
+
+def update_task(db: Session, db_task: Task, task: TaskCreate):
+    """Полностью обновляет задачу данными формы редактирования."""
+    db_task.title = task.title
+    db_task.text = task.text
+    db_task.solution = task.solution
+    db_task.answer = task.answer
+    db_task.difficulty = task.difficulty
+    db_task.grade = task.grade
+    db_task.year = task.year
+    db_task.source_id = task.source_id
+    db_task.author_id = task.author_id
+
+    topics = db.query(Topic).filter(Topic.id.in_(task.topic_ids)).all() if task.topic_ids else []
+    db_task.topics = topics
+
+    subs = db.query(Subtopic).filter(Subtopic.id.in_(task.subtopic_ids)).all() if task.subtopic_ids else []
+    db_task.subtopics = subs
+
+    db.commit()
+    db.refresh(db_task)
+    return db_task
+
+
 def get_tasks_by_ids(db: Session, task_ids: List[int]):
     """Возвращает задачи по списку id — используется экспортом выбранных задач в TeX/PDF."""
     if not task_ids:

@@ -1,7 +1,8 @@
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import LatexContent from "@/components/LatexContent"
 import CopyLatexButton from "@/components/CopyLatexButton"
+import { useAuth } from "@/context/AuthContext"
 
 interface Task {
   id: number
@@ -19,20 +20,79 @@ interface Task {
 
 export default function TaskDetailPage() {
   const { id } = useParams()
+  const { user, token } = useAuth()
+  const navigate = useNavigate()
   const [task, setTask] = useState<Task | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
+    setLoading(true)
+    setLoadError(null)
     fetch(`/api/tasks/${id}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status === 404 ? "Задача не найдена" : "Ошибка загрузки задачи")
+        return res.json()
+      })
       .then((data) => setTask(data))
-      .catch(console.error)
+      .catch((e) => setLoadError(e.message || "Ошибка загрузки задачи"))
+      .finally(() => setLoading(false))
   }, [id])
 
-  if (!task) return <div className="text-center text-white mt-10">Загрузка...</div>
+  const canEdit = !!user && ["admin", "moderator", "founder"].includes(user.role)
+
+  const handleDelete = async () => {
+    if (!task) return
+    if (!confirm(`Удалить задачу «${task.title || "без названия"}»? Это необратимо.`)) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.detail || `Ошибка: ${res.status}`)
+      }
+      navigate("/tasks")
+    } catch (e: any) {
+      setDeleteError(e.message || "Не удалось удалить задачу")
+      setDeleting(false)
+    }
+  }
+
+  if (loading) return <div className="text-center text-white mt-10">Загрузка...</div>
+  if (loadError || !task) {
+    return <div className="text-center text-red-400 mt-10">{loadError || "Задача не найдена"}</div>
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-6 text-white space-y-6">
-      <Link to="/" className="text-blue-400 hover:underline">← Назад к списку задач</Link>
+      <div className="flex items-center justify-between">
+        <Link to="/tasks" className="text-blue-400 hover:underline">← Назад к списку задач</Link>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/task/${task.id}/edit`}
+              className="text-sm px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-white/80 transition"
+            >
+              Редактировать
+            </Link>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-sm px-3 py-1.5 rounded-full border border-red-500/40 text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
+            >
+              {deleting ? "Удаляем..." : "Удалить"}
+            </button>
+          </div>
+        )}
+      </div>
+      {deleteError && <p className="text-red-400 text-sm">{deleteError}</p>}
 
       <div className="space-y-2">
         {task.title && (

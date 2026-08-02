@@ -11,3 +11,19 @@ def create_topic(db: Session, topic: TopicCreate):
 
 def get_all_topics(db: Session):
     return db.query(Topic).all()
+
+def get_topic_by_name(db: Session, name: str):
+    return db.query(Topic).filter(Topic.name == name).first()
+
+def get_topic(db: Session, topic_id: int):
+    return db.query(Topic).filter(Topic.id == topic_id).first()
+
+def update_topic(db: Session, db_topic: Topic, name: str):
+    db_topic.name = name
+    db.commit()
+    db.refresh(db_topic)
+    return db_topic
+
+def delete_topic(db: Session, db_topic: Topic):
+    db.delete(db_topic)
+    db.commit()

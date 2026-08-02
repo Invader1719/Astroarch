@@ -72,3 +72,26 @@ def create_task(
     current_user: User = Security(require_role("admin", "moderator", "founder")),
 ):
     return crud_task.create_task(db, task, current_user.id)
+
+@router.patch("/tasks/{task_id}", response_model=TaskOut)
+def update_task(
+    task_id: int,
+    task: TaskCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Security(require_role("admin", "moderator", "founder")),
+):
+    db_task = crud_task.get_task(db, task_id)
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return crud_task.update_task(db, db_task, task)
+
+@router.delete("/tasks/{task_id}", status_code=204)
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Security(require_role("admin", "moderator", "founder")),
+):
+    db_task = crud_task.get_task(db, task_id)
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    crud_task.delete_task(db, db_task)

@@ -3,6 +3,7 @@ import TasksPage from "./pages/TasksPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AddTaskPage from "./pages/AddTaskPage";
+import EditTaskPage from "./pages/EditTaskPage";
 import ProfilePage from "./pages/ProfilePage";
 import TaskDetailPage from "./pages/TaskDetailPage";
 import AdminPanel from "./pages/AdminPanel";
@@ -28,6 +29,15 @@ export default function App() {
           element={
             <ProtectedRoute roles={["admin", "moderator", "founder"]}>
               <AddTaskPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/task/:id/edit"
+          element={
+            <ProtectedRoute roles={["admin", "moderator", "founder"]}>
+              <EditTaskPage />
             </ProtectedRoute>
           }
         />
