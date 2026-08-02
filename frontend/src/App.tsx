@@ -8,6 +8,7 @@ import ProfilePage from "./pages/ProfilePage";
 import TaskDetailPage from "./pages/TaskDetailPage";
 import AdminPanel from "./pages/AdminPanel";
 import UsersAdminPage from "./pages/UsersAdminPage";
+import SuggestionsPage from "./pages/SuggestionsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Header from "@/components/Header"; // ← новая шапка
 
@@ -65,6 +66,15 @@ export default function App() {
           element={
             <ProtectedRoute roles={["admin", "founder"]}>
               <UsersAdminPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/suggestions"
+          element={
+            <ProtectedRoute roles={["moderator", "admin", "founder"]}>
+              <SuggestionsPage />
             </ProtectedRoute>
           }
         />

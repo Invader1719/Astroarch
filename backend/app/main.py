@@ -14,7 +14,8 @@ from app.models import (
     task_topic,
     task_subtopic,
     user,
-    author
+    author,
+    task_suggestion
 )
 
 # Импорт роутеров
@@ -25,7 +26,8 @@ from app.api import (
     subtopic as subtopic_api,
     generate as generate_api,
     author as author_api,
-    user as user_api
+    user as user_api,
+    suggestion as suggestion_api
 )
 
 app = FastAPI()
@@ -45,6 +47,7 @@ app.include_router(generate_api.router)
 app.include_router(export_api.router)
 app.include_router(author_api.router)
 app.include_router(user_api.router)
+app.include_router(suggestion_api.router)
 app.include_router(auth.router, prefix="/auth")
 
 app.add_middleware(

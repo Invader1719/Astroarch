@@ -28,6 +28,12 @@ export default function TaskDetailPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  const [showSuggestForm, setShowSuggestForm] = useState(false)
+  const [suggestText, setSuggestText] = useState("")
+  const [suggestSending, setSuggestSending] = useState(false)
+  const [suggestError, setSuggestError] = useState<string | null>(null)
+  const [suggestSent, setSuggestSent] = useState(false)
+
   useEffect(() => {
     setLoading(true)
     setLoadError(null)
@@ -61,6 +67,30 @@ export default function TaskDetailPage() {
     } catch (e: any) {
       setDeleteError(e.message || "Не удалось удалить задачу")
       setDeleting(false)
+    }
+  }
+
+  const handleSuggestSubmit = async () => {
+    if (!task || !suggestText.trim()) return
+    setSuggestSending(true)
+    setSuggestError(null)
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/suggestions/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text: suggestText.trim() }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.detail || `Ошибка: ${res.status}`)
+      }
+      setSuggestText("")
+      setShowSuggestForm(false)
+      setSuggestSent(true)
+    } catch (e: any) {
+      setSuggestError(e.message || "Не удалось отправить предложение")
+    } finally {
+      setSuggestSending(false)
     }
   }
 
@@ -136,6 +166,57 @@ export default function TaskDetailPage() {
             <CopyLatexButton text={task.answer} />
           </div>
           <LatexContent text={task.answer} className="leading-relaxed" />
+        </div>
+      )}
+
+      {user && (
+        <div className="border-t border-white/10 pt-4">
+          {!showSuggestForm ? (
+            <button
+              type="button"
+              onClick={() => { setShowSuggestForm(true); setSuggestSent(false) }}
+              className="text-sm px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-white/80 transition"
+            >
+              Предложить изменение
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <label className="block font-semibold text-white text-sm">
+                Что и как поменять
+              </label>
+              <textarea
+                value={suggestText}
+                onChange={(e) => setSuggestText(e.target.value)}
+                rows={4}
+                placeholder="Например: в условии опечатка в третьем абзаце, должно быть «...»"
+                className="w-full bg-zinc-900 text-white border border-white/20 rounded px-3 py-2 focus:outline-none focus:border-blue-400"
+              />
+              {suggestError && <p className="text-red-400 text-sm">{suggestError}</p>}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSuggestSubmit}
+                  disabled={suggestSending || !suggestText.trim()}
+                  className="text-sm px-3 py-1.5 rounded-full bg-blue-500 hover:bg-blue-400 text-white font-semibold transition disabled:opacity-50"
+                >
+                  {suggestSending ? "Отправляем..." : "Отправить"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowSuggestForm(false); setSuggestError(null) }}
+                  disabled={suggestSending}
+                  className="text-sm px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-white/80 transition"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+          {suggestSent && (
+            <p className="text-green-400 text-sm mt-2">
+              Спасибо! Предложение отправлено на рассмотрение — статус можно посмотреть в личном кабинете.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -29,6 +29,16 @@ export default function Header() {
         </NavLink>
       )}
 
+      {/* Кнопка "Предложения" — очередь модерации, видна тем, кто может редактировать задачи */}
+      {user && ["moderator", "admin", "founder"].includes(user.role) && (
+        <NavLink
+          to="/suggestions"
+          className={({ isActive }) => `${baseLink} ${isActive ? active : ""}`}
+        >
+          Предложения
+        </NavLink>
+      )}
+
       {/* Кнопка "Справочники" (источники/темы/подтемы/авторы) только для admin */}
       {user && ["admin", "founder"].includes(user.role) && (
         <NavLink
