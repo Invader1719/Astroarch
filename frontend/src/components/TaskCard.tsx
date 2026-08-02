@@ -41,7 +41,7 @@ export default function TaskCard({ title, text, tags, id, selected, toggleSelect
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" asChild>
+              <Button asChild>
                 <Link to={`/task/${id}`}>Открыть</Link>
               </Button>
               <CopyLatexButton text={text} />

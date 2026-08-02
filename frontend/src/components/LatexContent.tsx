@@ -1,4 +1,4 @@
-import { useMemo, useRef, ClipboardEvent } from "react"
+import { useMemo, useRef, type ClipboardEvent } from "react"
 import { renderLatexHtml } from "@/lib/latex"
 
 type Props = {
