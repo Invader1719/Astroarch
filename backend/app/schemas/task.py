@@ -73,5 +73,6 @@ class TaskFilter(BaseModel):
 class TaskIdsRequest(BaseModel):
     """Список id выбранных пользователем задач — для экспорта в TeX/PDF."""
     task_ids: List[int] = Field(default_factory=list)
-    include_source: bool = True   # добавлять ли подпись источника (олимпиада/год/класс)
-    include_answer: bool = True   # добавлять ли ответ
+    include_source: bool = True     # добавлять ли подпись источника (олимпиада/год/класс)
+    include_answer: bool = False    # добавлять ли ответ
+    include_solution: bool = False  # добавлять ли решение

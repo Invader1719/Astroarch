@@ -131,7 +131,8 @@ export default function TasksPage() {
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const [includeSource, setIncludeSource] = useState(true)
-  const [includeAnswer, setIncludeAnswer] = useState(true)
+  const [includeAnswer, setIncludeAnswer] = useState(false)
+  const [includeSolution, setIncludeSolution] = useState(false)
 
   // поиск по тексту условия — с дебаунсом, чтобы не долбить сервер на каждое нажатие
   const [searchInput, setSearchInput] = useState("")
@@ -321,7 +322,12 @@ export default function TasksPage() {
       const res = await fetch("/api/export/tex/file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_ids: selected, include_source: includeSource, include_answer: includeAnswer }),
+        body: JSON.stringify({
+          task_ids: selected,
+          include_source: includeSource,
+          include_answer: includeAnswer,
+          include_solution: includeSolution,
+        }),
       })
       if (!res.ok) throw new Error(`Ошибка экспорта LaTeX: ${res.status}`)
       triggerBlobDownload(await res.blob(), "astro-tasks.tex")
@@ -341,7 +347,12 @@ export default function TasksPage() {
       const res = await fetch("/api/export/tex", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_ids: selected, include_source: includeSource, include_answer: includeAnswer }),
+        body: JSON.stringify({
+          task_ids: selected,
+          include_source: includeSource,
+          include_answer: includeAnswer,
+          include_solution: includeSolution,
+        }),
       })
       if (!res.ok) throw new Error(`Ошибка экспорта ZIP: ${res.status}`)
       triggerBlobDownload(await res.blob(), "astro-tasks-tex.zip")
@@ -362,6 +373,7 @@ export default function TasksPage() {
       selected.forEach(id => params.append("task_ids", String(id)))
       params.append("include_source", String(includeSource))
       params.append("include_answer", String(includeAnswer))
+      params.append("include_solution", String(includeSolution))
       const res = await fetch(`/api/generate/?${params.toString()}`)
       if (!res.ok) throw new Error(`Ошибка генерации PDF: ${res.status}`)
       triggerBlobDownload(await res.blob(), "astro-tasks.pdf")
@@ -405,6 +417,7 @@ export default function TasksPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         <YesNoToggle label="Добавлять источник" value={includeSource} onChange={setIncludeSource} />
         <YesNoToggle label="Добавлять ответ" value={includeAnswer} onChange={setIncludeAnswer} />
+        <YesNoToggle label="Добавлять решение" value={includeSolution} onChange={setIncludeSolution} />
       </div>
       <div className="flex flex-wrap gap-3">
         <Button onClick={downloadLatex} disabled={selected.length === 0 || exporting}>

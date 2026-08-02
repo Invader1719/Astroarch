@@ -59,7 +59,7 @@
 \vspace{0.5em}\noindent{\itshape Ответ: {{ task.answer | safe }}\par}
 {% endif %}
 
-{% if task.solution %}
+{% if include_solution and task.solution %}
 \vspace{0.5em}\noindent{\itshape Решение: {{ task.solution | safe }}\par}
 {% endif %}
 

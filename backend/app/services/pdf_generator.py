@@ -33,9 +33,20 @@ def _find_tectonic() -> str:
 TECTONIC_BIN = _find_tectonic()
 
 
-def generate_tex_file(tasks: List[Task], tex_path: str, include_source: bool = True, include_answer: bool = True):
+def generate_tex_file(
+    tasks: List[Task],
+    tex_path: str,
+    include_source: bool = True,
+    include_answer: bool = False,
+    include_solution: bool = False,
+):
     template = env.get_template("base_template.tex")
-    tex_content = template.render(tasks=tasks, include_source=include_source, include_answer=include_answer)
+    tex_content = template.render(
+        tasks=tasks,
+        include_source=include_source,
+        include_answer=include_answer,
+        include_solution=include_solution,
+    )
     with open(tex_path, "w", encoding="utf-8") as f:
         f.write(tex_content)
 

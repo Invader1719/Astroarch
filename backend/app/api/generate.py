@@ -25,7 +25,8 @@ def generate_pdf(
     source_id: Optional[int] = None,
     grade: Optional[int] = None,
     include_source: bool = Query(True),
-    include_answer: bool = Query(True),
+    include_answer: bool = Query(False),
+    include_solution: bool = Query(False),
     db: Session = Depends(get_db)
 ):
     query = db.query(Task)
@@ -51,7 +52,12 @@ def generate_pdf(
     filename = f"tasks_{uuid.uuid4().hex[:8]}"
     tex_path = os.path.join("generated", f"{filename}.tex")
 
-    generate_tex_file(tasks, tex_path, include_source=include_source, include_answer=include_answer)
+    generate_tex_file(
+        tasks, tex_path,
+        include_source=include_source,
+        include_answer=include_answer,
+        include_solution=include_solution,
+    )
     pdf_path = compile_tex_to_pdf(tex_path)
 
     return FileResponse(pdf_path, media_type="application/pdf", filename="tasks.pdf")

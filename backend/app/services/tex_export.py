@@ -106,7 +106,13 @@ def build_source_label(task) -> str:
     return ""
 
 
-def format_task_block(idx: int, task, include_source: bool = True, include_answer: bool = True) -> str:
+def format_task_block(
+    idx: int,
+    task,
+    include_source: bool = True,
+    include_answer: bool = False,
+    include_solution: bool = False,
+) -> str:
     """
     Генерирует блок вида:
     \noindent\textbf{Задача 1.} \source{...} Условие...
@@ -119,12 +125,15 @@ def format_task_block(idx: int, task, include_source: bool = True, include_answe
         prefix += rf" \textbf{{{tex_escape(title)}}}."
     if source_label:
         prefix += rf" \source{{{tex_escape(source_label)}}}"
-    # task.text/answer уже хранятся как LaTeX-код (см. app/seed_data.py), поэтому не экранируем
+    # task.text/answer/solution уже хранятся как LaTeX-код (см. app/seed_data.py), поэтому не экранируем
     statement = getattr(task, "statement", "") or getattr(task, "text", "")
     block = prefix + " " + statement
     answer = getattr(task, "answer", None)
     if include_answer and answer:
         block += "\n\n" + rf"\vspace{{0.5em}}\noindent{{\itshape Ответ: {answer}\par}}"
+    solution = getattr(task, "solution", None)
+    if include_solution and solution:
+        block += "\n\n" + rf"\vspace{{0.5em}}\noindent{{\itshape Решение: {solution}\par}}"
     return block + "\n\\vspace{0.5em}\n"
 
 
@@ -132,7 +141,8 @@ def build_main_tex(
     tasks: Iterable,
     meta: Optional[Dict[str, str]] = None,
     include_source: bool = True,
-    include_answer: bool = True,
+    include_answer: bool = False,
+    include_solution: bool = False,
 ) -> str:
     """
     Собираем итоговый main.tex. meta можно потом использовать для динамических колонтитулов.
@@ -140,7 +150,7 @@ def build_main_tex(
     # Хочешь — сюда добавь динамику колонтитулов, прописав \lhead и т.д. через \fancypagestyle
     tasks_tex = []
     for i, t in enumerate(tasks, start=1):
-        tasks_tex.append(format_task_block(i, t, include_source, include_answer))
+        tasks_tex.append(format_task_block(i, t, include_source, include_answer, include_solution))
 
     body = "".join(tasks_tex)
     return (
@@ -156,7 +166,8 @@ def build_standalone_tex(
     tasks: Iterable,
     meta: Optional[Dict[str, str]] = None,
     include_source: bool = True,
-    include_answer: bool = True,
+    include_answer: bool = False,
+    include_solution: bool = False,
 ) -> str:
     """
     Один самодостаточный .tex файл — шапка вшита прямо в документ, без
@@ -164,7 +175,7 @@ def build_standalone_tex(
     build_tex_zip, который кладёт шапку отдельным файлом в архив).
     """
     body = "".join(
-        format_task_block(i, t, include_source, include_answer)
+        format_task_block(i, t, include_source, include_answer, include_solution)
         for i, t in enumerate(tasks, start=1)
     )
     return (
@@ -182,11 +193,12 @@ def build_tex_zip(
     meta: Optional[Dict[str, str]] = None,
     zip_name: str = "tasks_tex.zip",
     include_source: bool = True,
-    include_answer: bool = True,
+    include_answer: bool = False,
+    include_solution: bool = False,
 ) -> BytesIO:
     buf = BytesIO()
     with ZipFile(buf, "w", ZIP_DEFLATED) as zf:
         zf.writestr("header.tex", HEADER_TEX + "\n")
-        zf.writestr("main.tex", build_main_tex(tasks, meta, include_source, include_answer))
+        zf.writestr("main.tex", build_main_tex(tasks, meta, include_source, include_answer, include_solution))
     buf.seek(0)
     return buf

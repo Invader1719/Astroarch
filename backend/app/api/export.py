@@ -36,6 +36,7 @@ def export_tex(
         zip_name="tasks_tex.zip",
         include_source=payload.include_source,
         include_answer=payload.include_answer,
+        include_solution=payload.include_solution,
     )
     headers = {
         "Content-Disposition": 'attachment; filename="tasks_tex.zip"'
@@ -57,6 +58,7 @@ def export_tex_file(
         tasks,
         include_source=payload.include_source,
         include_answer=payload.include_answer,
+        include_solution=payload.include_solution,
     )
     buf = BytesIO(content.encode("utf-8"))
     headers = {
