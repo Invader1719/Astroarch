@@ -55,11 +55,49 @@ HEADER_TEX = r"""
 \rhead{Страница \thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 % Нижний
-\lfoot{Тема: Планетные координаты}
+\lfoot{Тема: __TOPIC_LABEL__}
 \cfoot{Листок по астрономии}
 \rfoot{Станислав Потапов} % или оставь пустым
 \renewcommand{\footrulewidth}{0.4pt}
 """.strip()
+
+
+# ===== 1a) Подпись темы в нижнем колонтитуле =====
+_TOPIC_LABEL_MAX_LEN = len("Движение Луны и планет")  # длиннее — не влезает в колонтитул, ставим "Астрономия"
+
+
+def compute_topic_label(tasks: Iterable) -> str:
+    """
+    Если среди задач ровно одна уникальная подтема — пишем её.
+    Если подтем несколько, но все из одной темы — пишем тему.
+    Если тем несколько (или тем/подтем нет вовсе) — общее "Астрономия".
+    Если получившееся название длиннее эталонной фразы — тоже "Астрономия".
+    """
+    subtopic_names: Dict[int, str] = {}
+    for t in tasks:
+        for st in getattr(t, "subtopics", None) or []:
+            sid, sname = getattr(st, "id", None), getattr(st, "name", None)
+            if sid is not None and sname:
+                subtopic_names[sid] = sname
+    if len(subtopic_names) == 1:
+        label = next(iter(subtopic_names.values()))
+        return label if len(label) <= _TOPIC_LABEL_MAX_LEN else "Астрономия"
+
+    topic_names: Dict[int, str] = {}
+    for t in tasks:
+        for tp in getattr(t, "topics", None) or []:
+            tid, tname = getattr(tp, "id", None), getattr(tp, "name", None)
+            if tid is not None and tname:
+                topic_names[tid] = tname
+    if len(topic_names) == 1:
+        label = next(iter(topic_names.values()))
+        return label if len(label) <= _TOPIC_LABEL_MAX_LEN else "Астрономия"
+
+    return "Астрономия"
+
+
+def render_header_tex(topic_label: str) -> str:
+    return HEADER_TEX.replace("__TOPIC_LABEL__", tex_escape(topic_label))
 
 
 # ===== 2) Утилита экранирования =====
@@ -174,13 +212,14 @@ def build_standalone_tex(
     отдельного header.tex (для кнопки "Скачать LaTeX", в отличие от
     build_tex_zip, который кладёт шапку отдельным файлом в архив).
     """
+    tasks = list(tasks)
     body = "".join(
         format_task_block(i, t, include_source, include_answer, include_solution)
         for i, t in enumerate(tasks, start=1)
     )
     return (
         r"\documentclass[a4paper,12pt]{article}" + "\n"
-        + HEADER_TEX + "\n\n"
+        + render_header_tex(compute_topic_label(tasks)) + "\n\n"
         r"\begin{document}" + "\n\n"
         f"{body}\n"
         r"\end{document}" + "\n"
@@ -196,9 +235,10 @@ def build_tex_zip(
     include_answer: bool = False,
     include_solution: bool = False,
 ) -> BytesIO:
+    tasks = list(tasks)
     buf = BytesIO()
     with ZipFile(buf, "w", ZIP_DEFLATED) as zf:
-        zf.writestr("header.tex", HEADER_TEX + "\n")
+        zf.writestr("header.tex", render_header_tex(compute_topic_label(tasks)) + "\n")
         zf.writestr("main.tex", build_main_tex(tasks, meta, include_source, include_answer, include_solution))
     buf.seek(0)
     return buf

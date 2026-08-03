@@ -3,6 +3,7 @@ import shutil
 import subprocess
 from jinja2 import Environment, FileSystemLoader
 from app.models.task import Task
+from app.services.tex_export import compute_topic_label, tex_escape
 from typing import List
 
 TEMPLATE_DIR = "tex_templates"
@@ -46,6 +47,7 @@ def generate_tex_file(
         include_source=include_source,
         include_answer=include_answer,
         include_solution=include_solution,
+        topic_label=tex_escape(compute_topic_label(tasks)),
     )
     with open(tex_path, "w", encoding="utf-8") as f:
         f.write(tex_content)
