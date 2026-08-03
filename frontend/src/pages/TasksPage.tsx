@@ -244,10 +244,19 @@ export default function TasksPage() {
     setter(list.includes(value) ? list.filter(v => v !== value) : [...list, value])
   }
 
-  const toggleExpandedTopic = (topicId: number) => {
-    setExpandedTopics(prev =>
-      prev.includes(topicId) ? prev.filter(id => id !== topicId) : [...prev, topicId]
-    )
+  const toggleExpandedTopic = (topicId: number, neighborId?: number) => {
+    setExpandedTopics(prev => {
+      if (prev.includes(topicId)) {
+        // сворачиваем только эту тему, соседнюю не трогаем
+        return prev.filter(id => id !== topicId)
+      }
+      // разворачиваем эту тему и сразу соседнюю по сетке (2 колонки), если ещё не открыта
+      const next = [...prev, topicId]
+      if (neighborId !== undefined && !next.includes(neighborId)) {
+        next.push(neighborId)
+      }
+      return next
+    })
   }
 
   const resetFilters = () => {
@@ -549,7 +558,9 @@ export default function TasksPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {topics.map(t => {
+          {topics.map((t, i) => {
+            // сетка в 2 колонки — сосед по строке: чётный индекс -> следующий, нечётный -> предыдущий
+            const neighborTopic = i % 2 === 0 ? topics[i + 1] : topics[i - 1]
             const color = getTopicColor(t.name)
             const isExpanded = expandedTopics.includes(t.id)
             const topicSubtopics = subtopics.filter(s => s.topic_id === t.id)
@@ -575,7 +586,7 @@ export default function TasksPage() {
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color.dot}`} />
                   <button
                     type="button"
-                    onClick={() => toggleExpandedTopic(t.id)}
+                    onClick={() => toggleExpandedTopic(t.id, neighborTopic?.id)}
                     className="flex-1 flex items-center justify-between gap-2 text-left"
                   >
                     <span className="font-semibold text-white text-sm">
