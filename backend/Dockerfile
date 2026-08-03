@@ -2,7 +2,8 @@ FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y \
     build-essential libpq-dev curl \
-    libfontconfig1 libgraphite2-3 libharfbuzz0b libicu76 libssl3t64 zlib1g && \
+    libfontconfig1 libgraphite2-3 libharfbuzz0b libicu76 libssl3t64 zlib1g \
+    fonts-dejavu-extra && \
     rm -rf /var/lib/apt/lists/*
 
 # tectonic — самодостаточный TeX/LaTeX-движок, нужен для генерации PDF

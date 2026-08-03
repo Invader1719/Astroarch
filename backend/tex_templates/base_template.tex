@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[11pt]{article}
 \usepackage{amsmath,amssymb,mathtools}
 
 % Шрифт — DejaVu Serif: штатный в образе, доп. пакеты не нужны
@@ -48,12 +48,7 @@
 \begin{document}
 
 {% for task in tasks %}
-\noindent\textbf{ЗАДАЧА {{ loop.index }}.}{% if task.title %} \textbf{{ '{' }}{{ task.title }}{{ '}' }}.{% endif %}
-{% if include_source and (task.source or task.year or task.grade) %}
-\textit{ ({% if task.source %}{{ task.source.name }}{% endif %}{% if task.year %}, {{ task.year }}{% endif %}{% if task.grade %}, {{ task.grade }} класс{% endif %}) }
-{% endif %}
-
-{{ task.text | safe }}
+\noindent\textbf{Задача {{ loop.index }}.}{% if task.title %} \textbf{{ '{' }}{{ task.title }}{{ '}' }}.{% endif %}{% if include_source and (task.source or task.year or task.grade) %} \textit{({% if task.source %}{{ task.source.name }}{% endif %}{% if task.year %}, {{ task.year }}{% endif %}{% if task.grade %}, {{ task.grade }} класс{% endif %})}{% endif %} {{ task.text | safe }}
 
 {% if include_answer and task.answer %}
 \vspace{0.5em}\noindent{\itshape Ответ: {{ task.answer | safe }}\par}
