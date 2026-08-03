@@ -66,6 +66,11 @@ def delete_author(
     db_author = crud_author.get_author(db, author_id)
     if not db_author:
         raise HTTPException(status_code=404, detail="Автор не найден")
+    # авторы прикреплены к задачам через связь many-to-many (task_author) — при
+    # db.delete() SQLAlchemy сам вычищает строки в task_author, поэтому
+    # IntegrityError тут никогда не сработает, проверяем явно
+    if db_author.tasks:
+        raise HTTPException(status_code=409, detail="Нельзя удалить — автор используется в задачах")
     try:
         crud_author.delete_author(db, db_author)
     except IntegrityError:

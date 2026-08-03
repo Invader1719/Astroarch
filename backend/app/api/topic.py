@@ -61,6 +61,14 @@ def delete_topic(
     db_topic = crud_topic.get_topic(db, topic_id)
     if not db_topic:
         raise HTTPException(status_code=404, detail="Тема не найдена")
+    # темы прикреплены к задачам через связь many-to-many (task_topic) — при
+    # db.delete() SQLAlchemy сам вычищает строки в task_topic, поэтому
+    # IntegrityError тут никогда не сработает, проверяем явно
+    if db_topic.tasks:
+        raise HTTPException(
+            status_code=409,
+            detail="Нельзя удалить — тема используется в задачах или содержит подтемы",
+        )
     try:
         crud_topic.delete_topic(db, db_topic)
     except IntegrityError:

@@ -61,6 +61,11 @@ def delete_subtopic(
     db_subtopic = crud_subtopic.get_subtopic(db, subtopic_id)
     if not db_subtopic:
         raise HTTPException(status_code=404, detail="Подтема не найдена")
+    # подтемы прикреплены к задачам через связь many-to-many (task_subtopic) — при
+    # db.delete() SQLAlchemy сам вычищает строки в task_subtopic, поэтому
+    # IntegrityError тут никогда не сработает, проверяем явно
+    if db_subtopic.tasks:
+        raise HTTPException(status_code=409, detail="Нельзя удалить — подтема используется в задачах")
     try:
         crud_subtopic.delete_subtopic(db, db_subtopic)
     except IntegrityError:
