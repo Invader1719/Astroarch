@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(true)
+  const [showLuminaInfo, setShowLuminaInfo] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -55,7 +56,31 @@ export default function ProfilePage() {
         <p><strong>ФИО:</strong> {user.last_name} {user.first_name} {user.middle_name ?? ""}</p>
         <p><strong>Никнейм:</strong> {user.nickname}</p>
         <p><strong>Роль:</strong> {user.role}</p>
-        <p><strong>Люмины:</strong> {user.lumina}</p>
+        <div className="flex items-center gap-1.5">
+          <p><strong>Люмины:</strong> {user.lumina}</p>
+          <button
+            type="button"
+            onClick={() => setShowLuminaInfo((v) => !v)}
+            aria-label="Что такое люмины"
+            title="Что такое люмины"
+            className="w-5 h-5 flex items-center justify-center rounded-full border border-white/30 text-xs text-white/70 hover:text-white hover:border-white/60 transition"
+          >
+            i
+          </button>
+        </div>
+        {showLuminaInfo && (
+          <div className="mt-2 mb-1 text-sm text-white/70 bg-black/20 border border-white/10 rounded-lg p-3 space-y-1">
+            <p>Люмины начисляются за добавление новой задачи в базу:</p>
+            <ul className="list-disc ml-5 space-y-0.5">
+              <li>+3 — за условие задачи</li>
+              <li>+5 — за решение</li>
+              <li>+2 — за ответ</li>
+            </ul>
+            <p className="text-white/50">
+              Начисляются один раз, при создании задачи (не при редактировании уже существующей).
+            </p>
+          </div>
+        )}
 
         <button
           onClick={() => {
