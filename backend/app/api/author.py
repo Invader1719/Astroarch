@@ -26,7 +26,7 @@ def list_authors(db: Session = Depends(get_db)):
 def add_author(
     data: AuthorCreate,
     db: Session = Depends(get_db),
-    current_user: User = Security(require_role("admin", "founder")),
+    current_user: User = Security(require_role("admin", "moderator", "founder")),
 ):
     name = (data.name or "").strip()
     if not name:

@@ -21,7 +21,7 @@ def get_db():
 def create_subtopic(
     subtopic: SubtopicCreate,
     db: Session = Depends(get_db),
-    current_user: User = Security(require_role("admin", "founder")),
+    current_user: User = Security(require_role("admin", "moderator", "founder")),
 ):
     name = subtopic.name.strip()
     if not name:

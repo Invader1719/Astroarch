@@ -134,11 +134,115 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
   const [authors, setAuthors] = useState<Author[]>([]);
   const [allYears, setAllYears] = useState<number[]>([]);
 
-  // год — единственное поле, для которого можно ввести совсем новое значение
-  // прямо здесь; источник/тема/подтема/автор создаются только в админ-панели
+  // год — свободное число, отдельная сущность не нужна
   const [year, setYear] = useState<number | "">(initial?.year ?? "");
   const [showNewYear, setShowNewYear] = useState(false);
   const [newYear, setNewYear] = useState<number | "">("");
+
+  // быстрое добавление источника/темы/подтемы/автора прямо из формы —
+  // тем же принципом, что и "+ Новый год" (модератор/админ/фаундер, см.
+  // require_role в app/api/{source,topic,subtopic,author}.py на бэкенде)
+  const [showNewSource, setShowNewSource] = useState(false);
+  const [newSourceName, setNewSourceName] = useState("");
+  const [creatingSource, setCreatingSource] = useState(false);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+
+  const [showNewTopic, setShowNewTopic] = useState(false);
+  const [newTopicName, setNewTopicName] = useState("");
+  const [creatingTopic, setCreatingTopic] = useState(false);
+  const [topicError, setTopicError] = useState<string | null>(null);
+
+  const [showNewSubtopic, setShowNewSubtopic] = useState(false);
+  const [newSubtopicName, setNewSubtopicName] = useState("");
+  const [newSubtopicTopicId, setNewSubtopicTopicId] = useState<number | "">("");
+  const [creatingSubtopic, setCreatingSubtopic] = useState(false);
+  const [subtopicError, setSubtopicError] = useState<string | null>(null);
+
+  const [showNewAuthor, setShowNewAuthor] = useState(false);
+  const [newAuthorName, setNewAuthorName] = useState("");
+  const [creatingAuthor, setCreatingAuthor] = useState(false);
+  const [authorError, setAuthorError] = useState<string | null>(null);
+
+  const createReference = async <T,>(
+    url: string,
+    body: any,
+    setCreating: (b: boolean) => void,
+    setErr: (e: string | null) => void
+  ): Promise<T | null> => {
+    setErr(null);
+    setCreating(true);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `Ошибка: ${res.status}`);
+      }
+      return await res.json();
+    } catch (e: any) {
+      setErr(e.message || "Не удалось создать");
+      return null;
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCreateSource = async () => {
+    const name = newSourceName.trim();
+    if (!name) return;
+    const created = await createReference<Source>("/api/sources/", { name }, setCreatingSource, setSourceError);
+    if (created) {
+      setSources((prev) => [...prev, created]);
+      setSourceId(created.id);
+      setShowNewSource(false);
+      setNewSourceName("");
+    }
+  };
+
+  const handleCreateTopic = async () => {
+    const name = newTopicName.trim();
+    if (!name) return;
+    const created = await createReference<Topic>("/api/topics/", { name }, setCreatingTopic, setTopicError);
+    if (created) {
+      setTopics((prev) => [...prev, created]);
+      setTopicIds((prev) => [...prev, created.id]);
+      setShowNewTopic(false);
+      setNewTopicName("");
+    }
+  };
+
+  const handleCreateSubtopic = async () => {
+    const name = newSubtopicName.trim();
+    const topicId = newSubtopicTopicId === "" ? topicIds[0] : newSubtopicTopicId;
+    if (!name || topicId === undefined) return;
+    const created = await createReference<Subtopic>(
+      "/api/subtopics/",
+      { name, topic_id: topicId },
+      setCreatingSubtopic,
+      setSubtopicError
+    );
+    if (created) {
+      setSubtopics((prev) => [...prev, created]);
+      setSubtopicIds((prev) => [...prev, created.id]);
+      setShowNewSubtopic(false);
+      setNewSubtopicName("");
+    }
+  };
+
+  const handleCreateAuthor = async () => {
+    const name = newAuthorName.trim();
+    if (!name) return;
+    const created = await createReference<Author>("/api/authors/", { name }, setCreatingAuthor, setAuthorError);
+    if (created) {
+      setAuthors((prev) => [...prev, created]);
+      setAuthorIds((prev) => [...prev, created.id]);
+      setShowNewAuthor(false);
+      setNewAuthorName("");
+    }
+  };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -364,20 +468,56 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
         {/* Источник */}
         <div>
           <label className={labelClass}>Источник (олимпиада)</label>
-          <select
-            value={sourceId}
-            onChange={(e) => setSourceId(e.target.value ? Number(e.target.value) : "")}
-            className={inputClass}
-            required
-          >
-            <option value="">Выберите источник</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-white/50">
-            Нет нужного источника? Добавить новый может только администратор — в панели администратора.
-          </p>
+          {sourceError && <p className="text-red-400 text-sm mb-1">{sourceError}</p>}
+          {!showNewSource ? (
+            <>
+              <select
+                value={sourceId}
+                onChange={(e) => setSourceId(e.target.value ? Number(e.target.value) : "")}
+                className={inputClass}
+                required
+              >
+                <option value="">Выберите источник</option>
+                {sources.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowNewSource(true)}
+                className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition"
+              >
+                + Новый источник (нет в списке)
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSourceName}
+                  onChange={(e) => setNewSourceName(e.target.value)}
+                  placeholder="например: ВсОШ. Закл"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateSource}
+                  disabled={creatingSource || !newSourceName.trim()}
+                  className="shrink-0 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 disabled:opacity-50 transition"
+                >
+                  {creatingSource ? "..." : "Создать"}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowNewSource(false); setNewSourceName(""); setSourceError(null); }}
+                className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition"
+              >
+                − Выбрать существующий источник
+              </button>
+            </>
+          )}
         </div>
 
         {/* Год олимпиады */}
@@ -428,10 +568,11 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
         {/* Авторы — можно выбрать нескольких (соавторство) */}
         <div>
           <label className={labelClass}>Авторы (необязательно)</label>
+          {authorError && <p className="text-red-400 text-sm mb-1">{authorError}</p>}
           {authors.length === 0 ? (
             <p className="text-sm text-white/50 italic">Список авторов пуст</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-2">
               {authors.map((a) => (
                 <button
                   type="button"
@@ -448,12 +589,49 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
               ))}
             </div>
           )}
+          {!showNewAuthor ? (
+            <button
+              type="button"
+              onClick={() => setShowNewAuthor(true)}
+              className="text-sm text-blue-400 hover:text-blue-300 transition"
+            >
+              + Новый автор (нет в списке)
+            </button>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newAuthorName}
+                  onChange={(e) => setNewAuthorName(e.target.value)}
+                  placeholder="например: А. А. Автаева"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateAuthor}
+                  disabled={creatingAuthor || !newAuthorName.trim()}
+                  className="shrink-0 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 disabled:opacity-50 transition"
+                >
+                  {creatingAuthor ? "..." : "Создать"}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowNewAuthor(false); setNewAuthorName(""); setAuthorError(null); }}
+                className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition"
+              >
+                − Отмена
+              </button>
+            </>
+          )}
         </div>
 
         {/* Темы */}
         <div>
           <label className={labelClass}>Темы</label>
-          <div className="flex flex-wrap gap-2">
+          {topicError && <p className="text-red-400 text-sm mb-1">{topicError}</p>}
+          <div className="flex flex-wrap gap-2 mb-2">
             {topics.map((t) => (
               <button
                 type="button"
@@ -469,6 +647,42 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
               </button>
             ))}
           </div>
+          {!showNewTopic ? (
+            <button
+              type="button"
+              onClick={() => setShowNewTopic(true)}
+              className="text-sm text-blue-400 hover:text-blue-300 transition"
+            >
+              + Новая тема (нет в списке)
+            </button>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTopicName}
+                  onChange={(e) => setNewTopicName(e.target.value)}
+                  placeholder="например: Оптика"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateTopic}
+                  disabled={creatingTopic || !newTopicName.trim()}
+                  className="shrink-0 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 disabled:opacity-50 transition"
+                >
+                  {creatingTopic ? "..." : "Создать"}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowNewTopic(false); setNewTopicName(""); setTopicError(null); }}
+                className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition"
+              >
+                − Отмена
+              </button>
+            </>
+          )}
         </div>
 
         {/* Подтемы */}
@@ -477,24 +691,79 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
           {topicIds.length === 0 ? (
             <p className="text-sm text-white/50 italic">Выберите тему</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {subtopics
-                .filter((st) => topicIds.includes(st.topic_id))
-                .map((st) => (
+            <>
+              {subtopicError && <p className="text-red-400 text-sm mb-1">{subtopicError}</p>}
+              <div className="flex flex-wrap gap-2 mb-2">
+                {subtopics
+                  .filter((st) => topicIds.includes(st.topic_id))
+                  .map((st) => (
+                    <button
+                      type="button"
+                      key={st.id}
+                      onClick={() => toggleArrayValue(st.id, subtopicIds, setSubtopicIds)}
+                      className={`px-3 py-1.5 rounded-full border text-sm font-medium transition ${
+                        subtopicIds.includes(st.id)
+                          ? "bg-blue-500 border-blue-400 text-white"
+                          : "bg-zinc-900 border-white/20 text-white/70 hover:text-white hover:border-white/40"
+                      }`}
+                    >
+                      {st.name}
+                    </button>
+                  ))}
+              </div>
+              {!showNewSubtopic ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewSubtopic(true);
+                    setNewSubtopicTopicId(topicIds[0]);
+                  }}
+                  className="text-sm text-blue-400 hover:text-blue-300 transition"
+                >
+                  + Новая подтема (нет в списке)
+                </button>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    {topicIds.length > 1 && (
+                      <select
+                        value={newSubtopicTopicId}
+                        onChange={(e) => setNewSubtopicTopicId(e.target.value ? Number(e.target.value) : "")}
+                        className={inputClass + " shrink-0 w-auto"}
+                      >
+                        {topics
+                          .filter((t) => topicIds.includes(t.id))
+                          .map((t) => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                      </select>
+                    )}
+                    <input
+                      type="text"
+                      value={newSubtopicName}
+                      onChange={(e) => setNewSubtopicName(e.target.value)}
+                      placeholder="например: Рефракция"
+                      className={inputClass}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateSubtopic}
+                      disabled={creatingSubtopic || !newSubtopicName.trim()}
+                      className="shrink-0 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 disabled:opacity-50 transition"
+                    >
+                      {creatingSubtopic ? "..." : "Создать"}
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    key={st.id}
-                    onClick={() => toggleArrayValue(st.id, subtopicIds, setSubtopicIds)}
-                    className={`px-3 py-1.5 rounded-full border text-sm font-medium transition ${
-                      subtopicIds.includes(st.id)
-                        ? "bg-blue-500 border-blue-400 text-white"
-                        : "bg-zinc-900 border-white/20 text-white/70 hover:text-white hover:border-white/40"
-                    }`}
+                    onClick={() => { setShowNewSubtopic(false); setNewSubtopicName(""); setSubtopicError(null); }}
+                    className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition"
                   >
-                    {st.name}
+                    − Отмена
                   </button>
-                ))}
-            </div>
+                </>
+              )}
+            </>
           )}
         </div>
 
