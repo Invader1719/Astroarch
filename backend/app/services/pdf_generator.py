@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import Session
 from app.models.task import Task
-from app.services.tex_export import compute_topic_label, tex_escape
+from app.services.tex_export import compute_topic_label, format_grade_label, tex_escape
 from app.services.task_images import UPLOAD_DIR, build_caption, replace_image_tokens
 from app.crud.task_image import get_task_image
 from typing import List, Optional
@@ -59,7 +59,7 @@ def _resolve_task_images(db: Session, idx: int, task: Task) -> SimpleNamespace:
         title=title,
         source=getattr(task, "source", None),
         year=getattr(task, "year", None),
-        grade=getattr(task, "grade", None),
+        grade_label=format_grade_label(getattr(task, "grades", None)),
         text=replace_image_tokens(task.text, path_for_id, caption),
         answer=replace_image_tokens(getattr(task, "answer", None), path_for_id, caption),
         solution=replace_image_tokens(getattr(task, "solution", None), path_for_id, caption),

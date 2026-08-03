@@ -42,7 +42,7 @@ def generate_pdf(
             query = query.join(Task.topics).filter(Topic.id.in_(topic_ids))
 
         if grade:
-            query = query.filter(Task.grade == grade)
+            query = query.filter(Task.grades.any(grade))
 
     tasks = query.limit(50).all()
 

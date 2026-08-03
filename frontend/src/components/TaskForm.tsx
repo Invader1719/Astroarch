@@ -12,7 +12,7 @@ export type TaskPayload = {
   solution: string | null;
   answer: string | null;
   difficulty: number;
-  grade: number;
+  grades: number[];
   year: number;
   source_id: number;
   author_ids: number[];
@@ -26,7 +26,7 @@ export type TaskFormInitial = {
   solution?: string;
   answer?: string;
   difficulty?: number;
-  grade?: number | "";
+  grades?: number[];
   year?: number | "";
   sourceId?: number | "";
   authorIds?: number[];
@@ -44,6 +44,8 @@ type Props = {
 const inputClass =
   "w-full bg-zinc-900 text-white border border-white/20 rounded px-3 py-2 focus:outline-none focus:border-blue-400";
 const labelClass = "block mb-1 font-semibold text-white";
+// сквозные задачи — классов может быть несколько сразу
+const GRADE_OPTIONS = [5, 6, 7, 8, 9, 10, 11];
 
 type ImageField = "text" | "solution" | "answer";
 
@@ -121,7 +123,7 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
     }
   };
   const [difficulty, setDifficulty] = useState(initial?.difficulty ?? 1);
-  const [grade, setGrade] = useState<number | "">(initial?.grade ?? "");
+  const [grades, setGrades] = useState<number[]>(initial?.grades ?? []);
   const [sourceId, setSourceId] = useState<number | "">(initial?.sourceId ?? "");
   const [authorIds, setAuthorIds] = useState<number[]>(initial?.authorIds ?? []);
   const [topicIds, setTopicIds] = useState<number[]>(initial?.topicIds ?? []);
@@ -292,7 +294,7 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
     try {
       if (!text.trim()) throw new Error("Введите условие задачи");
       if (sourceId === "") throw new Error("Выберите источник");
-      if (grade === "") throw new Error("Укажите класс");
+      if (grades.length === 0) throw new Error("Укажите хотя бы один класс");
       const finalYear = showNewYear ? newYear : year;
       if (finalYear === "") throw new Error("Укажите год олимпиады");
 
@@ -302,7 +304,7 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
         solution: solution || null,
         answer: answer || null,
         difficulty: Number(difficulty),
-        grade: Number(grade),
+        grades,
         year: Number(finalYear),
         source_id: Number(sourceId),
         author_ids: authorIds,
@@ -438,30 +440,37 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
           />
         </div>
 
-        {/* Сложность и Класс — в один ряд */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Сложность</label>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={difficulty}
-              onChange={(e) => setDifficulty(Number(e.target.value))}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Класс</label>
-            <input
-              type="number"
-              min={1}
-              max={11}
-              value={grade}
-              onChange={(e) => setGrade(e.target.value ? Number(e.target.value) : "")}
-              className={inputClass}
-              required
-            />
+        {/* Сложность */}
+        <div>
+          <label className={labelClass}>Сложность</label>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={difficulty}
+            onChange={(e) => setDifficulty(Number(e.target.value))}
+            className={inputClass}
+          />
+        </div>
+
+        {/* Классы — сквозная задача может относиться сразу к нескольким */}
+        <div>
+          <label className={labelClass}>Классы</label>
+          <div className="flex flex-wrap gap-2">
+            {GRADE_OPTIONS.map((g) => (
+              <button
+                type="button"
+                key={g}
+                onClick={() => toggleArrayValue(g, grades, setGrades)}
+                className={`w-10 h-10 rounded-full border text-sm font-semibold transition ${
+                  grades.includes(g)
+                    ? "bg-blue-500 border-blue-400 text-white"
+                    : "bg-zinc-900 border-white/20 text-white/70 hover:text-white hover:border-white/40"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
           </div>
         </div>
 

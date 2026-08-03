@@ -7,7 +7,7 @@ type ApiTask = {
   title?: string
   text: string
   difficulty: number
-  grade: number
+  grades: number[]
   year: number
   created_at: string
   source?: { id: number; name: string }
@@ -23,7 +23,7 @@ type Task = {
   tags: string[]
   year: number
   sourceName?: string    // <— явное имя источника
-  grade?: number         // <— класс
+  grades?: number[]      // <— классы (может быть несколько — сквозная задача)
   authorName?: string    // <— авторы задачи (через запятую, если несколько)
 }
 
@@ -156,6 +156,14 @@ function loadStoredFilters(): FiltersState {
   } catch {
     return DEFAULT_FILTERS
   }
+}
+
+function formatGrades(grades: number[]): string {
+  const g = [...new Set(grades)].sort((a, b) => a - b)
+  if (g.length === 0) return ""
+  if (g.length === 1) return `${g[0]} класс`
+  const isRange = g.every((v, i) => i === 0 || v === g[i - 1] + 1)
+  return isRange ? `${g[0]}–${g[g.length - 1]} классы` : `${g.join(", ")} классы`
 }
 
 export default function TasksPage() {
@@ -312,7 +320,7 @@ export default function TasksPage() {
           tags: [
             t.source?.name || "",
             String(t.year),
-            `${t.grade} класс`,
+            formatGrades(t.grades),
             ...(t.topics?.map(topic => topic.name) || []),
             ...(t.subtopics?.map(sub => sub.name) || []),
             t.authors && t.authors.length > 0
@@ -322,7 +330,7 @@ export default function TasksPage() {
           ].filter(Boolean),
           year: t.year,
           sourceName: t.source?.name,
-          grade: t.grade,
+          grades: t.grades,
           authorName: t.authors?.map(a => a.name).join(", "),
         }))
         setTasks(mapped)

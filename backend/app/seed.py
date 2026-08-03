@@ -52,7 +52,9 @@ def seed_if_empty(db: Session) -> None:
             solution=item.get("solution"),
             answer=item.get("answer"),
             difficulty=item["difficulty"],
-            grade=item["grade"],
+            # сквозные задачи — item["grades"] (список) или старое единственное
+            # число item["grade"] для обратной совместимости с seed_data.py
+            grades=item.get("grades") or [item["grade"]],
             year=item["year"],
             source_id=source_by_key[item["source_key"]].id,
         )

@@ -25,7 +25,7 @@ def get_all_tasks(
     db: Session,
     search: Optional[str] = None,          # поиск по тексту условия задачи
     sources: Optional[List[str]] = None,   # названия олимпиад (Source.name)
-    grades: Optional[List[int]] = None,    # классы (Task.grade)
+    grades: Optional[List[int]] = None,    # классы (Task.grades — пересечение множеств)
     topic_ids: Optional[List[int]] = None,
     subtopic_ids: Optional[List[int]] = None,
     author_ids: Optional[List[int]] = None,
@@ -76,9 +76,10 @@ def get_all_tasks(
         if year_max is not None:
             query = query.filter(Task.year <= year_max)
 
-    # --- фильтр по классу (атрибут самой задачи) ---
+    # --- фильтр по классу (атрибут самой задачи) — сквозная задача может
+    # иметь несколько классов, совпадением считаем пересечение множеств ---
     if grades:
-        query = query.filter(Task.grade.in_(grades))
+        query = query.filter(Task.grades.overlap(grades))
 
     # --- фильтры по темам/подтемам через relationships ---
     if topic_ids:
@@ -144,7 +145,7 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
         solution=task.solution,
         answer=task.answer,
         difficulty=task.difficulty,
-        grade=task.grade,
+        grades=task.grades,
         year=task.year,
         source_id=task.source_id,
         created_by_user_id=user_id,
@@ -204,7 +205,7 @@ def update_task(db: Session, db_task: Task, task: TaskCreate):
     db_task.solution = task.solution
     db_task.answer = task.answer
     db_task.difficulty = task.difficulty
-    db_task.grade = task.grade
+    db_task.grades = task.grades
     db_task.year = task.year
     db_task.source_id = task.source_id
 

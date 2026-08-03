@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -15,7 +16,7 @@ class Task(Base):
     solution = Column(Text, nullable=True)
     answer = Column(Text, nullable=True)
     difficulty = Column(Integer, nullable=False)
-    grade = Column(Integer, nullable=False)  # класс (9/10/11) — атрибут задачи, не источника
+    grades = Column(ARRAY(Integer), nullable=False)  # классы (сквозные задачи — может быть несколько)
     year = Column(Integer, nullable=False)   # год олимпиады — тоже атрибут задачи, не источника
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())

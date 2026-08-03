@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Security
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import List
@@ -70,5 +71,6 @@ def delete_source(
 
 @router.get("/grades/", response_model=List[int])
 def get_grades(db: Session = Depends(get_db)):
-    grades = db.query(Task.grade).distinct().all()
-    return sorted(g[0] for g in grades if g[0] is not None)
+    # grades — ARRAY(Integer); unnest разворачивает массивы в отдельные строки
+    rows = db.query(func.unnest(Task.grades)).distinct().all()
+    return sorted(r[0] for r in rows if r[0] is not None)

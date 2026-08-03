@@ -30,7 +30,7 @@ class TaskBase(BaseModel):
     solution: Optional[str] = None
     answer: Optional[str] = None
     difficulty: int
-    grade: int                                      # класс — обязателен
+    grades: List[int] = Field(default_factory=list)  # классы — сквозная задача может иметь несколько
     year: int                                       # год олимпиады — обязателен
     source_id: int
     author_ids: List[int] = Field(default_factory=list)
@@ -46,7 +46,7 @@ class TaskOut(BaseModel):
     title: Optional[str] = None
     text: str
     difficulty: int
-    grade: int
+    grades: List[int] = Field(default_factory=list)
     year: int
     created_at: datetime
     solution: Optional[str] = None

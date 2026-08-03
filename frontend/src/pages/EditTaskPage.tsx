@@ -10,7 +10,7 @@ type ApiTask = {
   solution?: string | null;
   answer?: string | null;
   difficulty: number;
-  grade: number;
+  grades: number[];
   year: number;
   source?: { id: number; name: string } | null;
   authors?: { id: number; name: string }[];
@@ -80,7 +80,7 @@ export default function EditTaskPage() {
         solution: task.solution ?? "",
         answer: task.answer ?? "",
         difficulty: task.difficulty,
-        grade: task.grade,
+        grades: task.grades,
         year: task.year,
         sourceId: task.source?.id ?? "",
         authorIds: task.authors?.map((a) => a.id) ?? [],

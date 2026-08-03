@@ -131,9 +131,25 @@ def tex_escape(text: Optional[str]) -> str:
 
 
 # ===== 3) Строим main.tex по задачам =====
+def format_grade_label(grades) -> str:
+    """
+    Сквозная задача может быть отмечена сразу для нескольких классов —
+    склеиваем их в компактную подпись: "9 класс" / "9–11 классы" (подряд
+    идущие) / "9, 11 классы" (вразнобой).
+    """
+    g = sorted(set(grades or []))
+    if not g:
+        return ""
+    if len(g) == 1:
+        return f"{g[0]} класс"
+    if g == list(range(g[0], g[-1] + 1)):
+        return f"{g[0]}–{g[-1]} классы"
+    return ", ".join(str(x) for x in g) + " классы"
+
+
 def build_source_label(task) -> str:
     """
-    Собираем подпись источника: название источника + год + класс задачи
+    Собираем подпись источника: название источника + год + класс(ы) задачи
     (год и класс — атрибуты самой задачи, а не источника, см. app/models/task.py).
     """
     parts = []
@@ -141,8 +157,9 @@ def build_source_label(task) -> str:
         parts.append(str(task.source.name))
     if getattr(task, "year", None):
         parts.append(str(task.year))
-    if getattr(task, "grade", None):
-        parts.append(f"{task.grade} класс")
+    grade_label = format_grade_label(getattr(task, "grades", None))
+    if grade_label:
+        parts.append(grade_label)
     if parts:
         return ", ".join(parts)
     # Фоллбек, если источник хранится как текстовое поле

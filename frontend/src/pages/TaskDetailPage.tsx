@@ -10,12 +10,20 @@ interface Task {
   text: string
   solution?: string
   answer?: string
-  grade: number
+  grades: number[]
   year: number
   authors?: { id: number; name: string }[]
   source?: {
     name: string
   }
+}
+
+function formatGrades(grades: number[]): string {
+  const g = [...new Set(grades)].sort((a, b) => a - b)
+  if (g.length === 0) return ""
+  if (g.length === 1) return `${g[0]} класс`
+  const isRange = g.every((v, i) => i === 0 || v === g[i - 1] + 1)
+  return isRange ? `${g[0]}–${g[g.length - 1]} классы` : `${g.join(", ")} классы`
 }
 
 export default function TaskDetailPage() {
@@ -139,7 +147,8 @@ export default function TaskDetailPage() {
 
         {task.source && (
           <p className="text-sm text-white/70">
-            Источник: {task.source.name}, {task.year}, {task.grade} класс
+            Источник: {task.source.name}, {task.year}
+            {task.grades.length > 0 ? `, ${formatGrades(task.grades)}` : ""}
           </p>
         )}
 
