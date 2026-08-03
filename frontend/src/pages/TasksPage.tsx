@@ -763,7 +763,7 @@ export default function TasksPage() {
         {allYears.length === 0 ? (
           <p className="text-sm text-white/50 italic">Нет данных</p>
         ) : yearMode === "range" ? (
-          <div className="range-slider max-w-[500px]">
+          <div className="range-slider">
             <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-2 rounded-full bg-white/20" />
             <div
               className="absolute top-1/2 -translate-y-1/2 h-2 rounded-full bg-blue-500"
@@ -843,7 +843,7 @@ export default function TasksPage() {
         </div>
 
         {difficultyMode === "range" ? (
-          <div className="range-slider max-w-[500px]">
+          <div className="range-slider">
             <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-2 rounded-full bg-white/20" />
             <div
               className="absolute top-1/2 -translate-y-1/2 h-2 rounded-full bg-blue-500"
