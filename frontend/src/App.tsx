@@ -6,6 +6,7 @@ import AddTaskPage from "./pages/AddTaskPage";
 import EditTaskPage from "./pages/EditTaskPage";
 import ProfilePage from "./pages/ProfilePage";
 import TaskDetailPage from "./pages/TaskDetailPage";
+import ProgressPage from "./pages/ProgressPage";
 import AdminPanel from "./pages/AdminPanel";
 import UsersAdminPage from "./pages/UsersAdminPage";
 import SuggestionsPage from "./pages/SuggestionsPage";
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/" element={<div className="text-xl">Привет! Это главная страница</div>} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/task/:id" element={<TaskDetailPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

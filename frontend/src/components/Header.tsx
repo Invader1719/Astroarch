@@ -19,6 +19,10 @@ export default function Header() {
         Задачи
       </NavLink>
 
+      <NavLink to="/progress" className={({ isActive }) => `${baseLink} ${isActive ? active : ""}`}>
+        Прогресс
+      </NavLink>
+
       {/* Кнопка "Добавить задачу" видна админу и модератору */}
       {user && ["admin", "moderator", "founder"].includes(user.role) && (
         <NavLink
