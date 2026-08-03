@@ -22,6 +22,7 @@ body {
   top: 50%;
   left: 0;
   width: 100%;
+  height: 8px;
   margin: 0;
   transform: translateY(-50%);
   background: transparent;
@@ -46,6 +47,12 @@ body {
   pointer-events: auto;
   width: 28px;
   height: 28px;
+  /* WebKit не центрирует thumb по треку автоматически (в отличие от
+     Firefox) — без явного margin-top точка "сползает" относительно
+     линии, причём величина сдвига зависит от того, какую высоту браузер
+     сам вычислил для инпута (варьируется по зуму/DPI), отсюда и
+     "иногда". (8px трек - 28px thumb) / 2 = -10px центрирует точно. */
+  margin-top: -10px;
   border-radius: 9999px;
   background: #60a5fa;
   border: 3px solid white;
