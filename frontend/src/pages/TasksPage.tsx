@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import TaskCard from "@/components/TaskCard"
 import { Button } from "@/components/ui/button"
 
@@ -84,6 +84,13 @@ const TOPIC_COLORS: Record<string, TopicColor> = {
     chipSelected: "bg-fuchsia-400/40 border-fuchsia-300 text-white",
     dot: "bg-fuchsia-400",
   },
+  "Оптика": {
+    border: "border-yellow-400/30",
+    headerBg: "bg-yellow-400/10 hover:bg-yellow-400/15",
+    chip: "bg-yellow-400/10 border-yellow-400/30 text-yellow-100/80 hover:border-yellow-400/60 hover:text-yellow-50",
+    chipSelected: "bg-yellow-400/40 border-yellow-300 text-white",
+    dot: "bg-yellow-400",
+  },
 }
 
 const DEFAULT_TOPIC_COLOR: TopicColor = {
@@ -96,6 +103,61 @@ const DEFAULT_TOPIC_COLOR: TopicColor = {
 
 const getTopicColor = (name: string): TopicColor => TOPIC_COLORS[name] ?? DEFAULT_TOPIC_COLOR
 
+// Фильтры переживают переход на страницу задачи и обратно — храним их в
+// sessionStorage, а не только в useState, который слетает при размонтировании
+// TasksPage (переход по /task/:id и "Назад" на /tasks монтирует страницу заново).
+type FiltersState = {
+  searchInput: string
+  selectedSources: string[]
+  selectedGrades: number[]
+  selectedTopics: number[]
+  selectedSubtopics: number[]
+  expandedTopics: number[]
+  selectedAuthors: number[]
+  yearMode: YearMode
+  yearMin: number
+  yearMax: number
+  selectedYears: number[]
+  difficultyMode: DifficultyMode
+  difficultyMin: number
+  difficultyMax: number
+  selectedDifficulties: number[]
+  sortBy: SortBy
+  sortDir: "asc" | "desc"
+}
+
+const FILTERS_STORAGE_KEY = "astroarch:tasksFilters"
+
+const DEFAULT_FILTERS: FiltersState = {
+  searchInput: "",
+  selectedSources: [],
+  selectedGrades: [],
+  selectedTopics: [],
+  selectedSubtopics: [],
+  expandedTopics: [],
+  selectedAuthors: [],
+  yearMode: "range",
+  yearMin: 0,
+  yearMax: 0,
+  selectedYears: [],
+  difficultyMode: "range",
+  difficultyMin: DIFFICULTY_MIN,
+  difficultyMax: DIFFICULTY_MAX,
+  selectedDifficulties: [],
+  sortBy: "",
+  sortDir: "asc",
+}
+
+function loadStoredFilters(): FiltersState {
+  try {
+    const raw = sessionStorage.getItem(FILTERS_STORAGE_KEY)
+    if (!raw) return DEFAULT_FILTERS
+    return { ...DEFAULT_FILTERS, ...JSON.parse(raw) }
+  } catch {
+    return DEFAULT_FILTERS
+  }
+}
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -106,25 +168,30 @@ export default function TasksPage() {
   const [subtopics, setSubtopics] = useState<Subtopic[]>([])
   const [authors, setAuthors] = useState<Author[]>([])
 
-  const [selectedSources, setSelectedSources] = useState<string[]>([])
-  const [selectedGrades, setSelectedGrades] = useState<number[]>([])
-  const [selectedTopics, setSelectedTopics] = useState<number[]>([])
-  const [selectedSubtopics, setSelectedSubtopics] = useState<number[]>([])
-  const [expandedTopics, setExpandedTopics] = useState<number[]>([])
-  const [selectedAuthors, setSelectedAuthors] = useState<number[]>([])
+  const [initialFilters] = useState(loadStoredFilters)
+  // если год уже был восстановлен из sessionStorage — не даём эффекту ниже
+  // затереть его дефолтом из только что загруженного списка allYears
+  const yearsRestoredRef = useRef(initialFilters.yearMin !== 0 || initialFilters.yearMax !== 0)
+
+  const [selectedSources, setSelectedSources] = useState<string[]>(initialFilters.selectedSources)
+  const [selectedGrades, setSelectedGrades] = useState<number[]>(initialFilters.selectedGrades)
+  const [selectedTopics, setSelectedTopics] = useState<number[]>(initialFilters.selectedTopics)
+  const [selectedSubtopics, setSelectedSubtopics] = useState<number[]>(initialFilters.selectedSubtopics)
+  const [expandedTopics, setExpandedTopics] = useState<number[]>(initialFilters.expandedTopics)
+  const [selectedAuthors, setSelectedAuthors] = useState<number[]>(initialFilters.selectedAuthors)
 
   const [allYears, setAllYears] = useState<number[]>([])
-  const [yearMode, setYearMode] = useState<YearMode>("range")
-  const [yearMin, setYearMin] = useState(0)
-  const [yearMax, setYearMax] = useState(0)
-  const [selectedYears, setSelectedYears] = useState<number[]>([])
+  const [yearMode, setYearMode] = useState<YearMode>(initialFilters.yearMode)
+  const [yearMin, setYearMin] = useState(initialFilters.yearMin)
+  const [yearMax, setYearMax] = useState(initialFilters.yearMax)
+  const [selectedYears, setSelectedYears] = useState<number[]>(initialFilters.selectedYears)
 
-  const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>("range")
-  const [difficultyMin, setDifficultyMin] = useState(DIFFICULTY_MIN)
-  const [difficultyMax, setDifficultyMax] = useState(DIFFICULTY_MAX)
-  const [selectedDifficulties, setSelectedDifficulties] = useState<number[]>([])
-  const [sortBy, setSortBy] = useState<SortBy>("")
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>(initialFilters.difficultyMode)
+  const [difficultyMin, setDifficultyMin] = useState(initialFilters.difficultyMin)
+  const [difficultyMax, setDifficultyMax] = useState(initialFilters.difficultyMax)
+  const [selectedDifficulties, setSelectedDifficulties] = useState<number[]>(initialFilters.selectedDifficulties)
+  const [sortBy, setSortBy] = useState<SortBy>(initialFilters.sortBy)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(initialFilters.sortDir)
 
   const [selected, setSelected] = useState<number[]>([])
   const [exporting, setExporting] = useState(false)
@@ -134,8 +201,8 @@ export default function TasksPage() {
   const [includeSolution, setIncludeSolution] = useState(false)
 
   // поиск по тексту условия — с дебаунсом, чтобы не долбить сервер на каждое нажатие
-  const [searchInput, setSearchInput] = useState("")
-  const [search, setSearch] = useState("")
+  const [searchInput, setSearchInput] = useState(initialFilters.searchInput)
+  const [search, setSearch] = useState(initialFilters.searchInput.trim())
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 400)
     return () => clearTimeout(t)
@@ -152,13 +219,46 @@ export default function TasksPage() {
       .then(r => r.json())
       .then((list: number[]) => {
         setAllYears(list)
-        if (list.length > 0) {
+        if (list.length > 0 && !yearsRestoredRef.current) {
           setYearMin(list[0])
           setYearMax(list[list.length - 1])
         }
       })
       .catch(console.error)
   }, [])
+
+  // Сохраняем фильтры в sessionStorage, чтобы они не слетали при возврате
+  // со страницы задачи (TasksPage размонтируется при переходе на /task/:id)
+  useEffect(() => {
+    const state: FiltersState = {
+      searchInput,
+      selectedSources,
+      selectedGrades,
+      selectedTopics,
+      selectedSubtopics,
+      expandedTopics,
+      selectedAuthors,
+      yearMode,
+      yearMin,
+      yearMax,
+      selectedYears,
+      difficultyMode,
+      difficultyMin,
+      difficultyMax,
+      selectedDifficulties,
+      sortBy,
+      sortDir,
+    }
+    try {
+      sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(state))
+    } catch {
+      // sessionStorage недоступен (приватный режим и т.п.) — просто не сохраняем
+    }
+  }, [
+    searchInput, selectedSources, selectedGrades, selectedTopics, selectedSubtopics,
+    expandedTopics, selectedAuthors, yearMode, yearMin, yearMax, selectedYears,
+    difficultyMode, difficultyMin, difficultyMax, selectedDifficulties, sortBy, sortDir,
+  ])
 
   // Загружаем задачи
   useEffect(() => {
