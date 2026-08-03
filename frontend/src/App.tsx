@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
 import TasksPage from "./pages/TasksPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -19,7 +20,7 @@ export default function App() {
       <Header />
 
       <Routes>
-        <Route path="/" element={<div className="text-xl">Привет! Это главная страница</div>} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/task/:id" element={<TaskDetailPage />} />
         <Route path="/progress" element={<ProgressPage />} />
