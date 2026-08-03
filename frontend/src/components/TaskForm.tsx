@@ -14,7 +14,7 @@ export type TaskPayload = {
   grade: number;
   year: number;
   source_id: number;
-  author_id: number | null;
+  author_ids: number[];
   topic_ids: number[];
   subtopic_ids: number[];
 };
@@ -28,7 +28,7 @@ export type TaskFormInitial = {
   grade?: number | "";
   year?: number | "";
   sourceId?: number | "";
-  authorId?: number | "";
+  authorIds?: number[];
   topicIds?: number[];
   subtopicIds?: number[];
 };
@@ -53,7 +53,7 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
   const [difficulty, setDifficulty] = useState(initial?.difficulty ?? 1);
   const [grade, setGrade] = useState<number | "">(initial?.grade ?? "");
   const [sourceId, setSourceId] = useState<number | "">(initial?.sourceId ?? "");
-  const [authorId, setAuthorId] = useState<number | "">(initial?.authorId ?? "");
+  const [authorIds, setAuthorIds] = useState<number[]>(initial?.authorIds ?? []);
   const [topicIds, setTopicIds] = useState<number[]>(initial?.topicIds ?? []);
   const [subtopicIds, setSubtopicIds] = useState<number[]>(initial?.subtopicIds ?? []);
 
@@ -131,7 +131,7 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
         grade: Number(grade),
         year: Number(finalYear),
         source_id: Number(sourceId),
-        author_id: authorId === "" ? null : Number(authorId),
+        author_ids: authorIds,
         topic_ids: topicIds,
         subtopic_ids: subtopicIds,
       };
@@ -287,19 +287,29 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
           )}
         </div>
 
-        {/* Автор */}
+        {/* Авторы — можно выбрать нескольких (соавторство) */}
         <div>
-          <label className={labelClass}>Автор (необязательно)</label>
-          <select
-            value={authorId}
-            onChange={(e) => setAuthorId(e.target.value ? Number(e.target.value) : "")}
-            className={inputClass}
-          >
-            <option value="">Не указывать автора</option>
-            {authors.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
+          <label className={labelClass}>Авторы (необязательно)</label>
+          {authors.length === 0 ? (
+            <p className="text-sm text-white/50 italic">Список авторов пуст</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {authors.map((a) => (
+                <button
+                  type="button"
+                  key={a.id}
+                  onClick={() => toggleArrayValue(a.id, authorIds, setAuthorIds)}
+                  className={`px-3 py-1.5 rounded-full border text-sm font-medium transition ${
+                    authorIds.includes(a.id)
+                      ? "bg-blue-500 border-blue-400 text-white"
+                      : "bg-zinc-900 border-white/20 text-white/70 hover:text-white hover:border-white/40"
+                  }`}
+                >
+                  {a.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Темы */}

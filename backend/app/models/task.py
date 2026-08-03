@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.task_topic import task_topic
 from app.models.task_subtopic import task_subtopic
+from app.models.task_author import task_author
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -17,12 +18,12 @@ class Task(Base):
     grade = Column(Integer, nullable=False)  # класс (9/10/11) — атрибут задачи, не источника
     year = Column(Integer, nullable=False)   # год олимпиады — тоже атрибут задачи, не источника
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
-    author_id = Column(Integer, ForeignKey("authors.id"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     topics = relationship("Topic", secondary=task_topic, backref="tasks")
     subtopics = relationship("Subtopic", secondary=task_subtopic, backref="tasks")
     source = relationship("Source")  # ← вот это важно для фильтрации по классу
-    author = relationship("Author", back_populates="tasks")
+    # у задачи может быть несколько авторов (соавторство) — раньше было author_id (один автор)
+    authors = relationship("Author", secondary=task_author, backref="tasks")
     created_by_user = relationship("User")

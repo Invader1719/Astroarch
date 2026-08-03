@@ -45,7 +45,7 @@ def get_all_tasks(
         db.query(Task)
         .options(
             joinedload(Task.source),
-            joinedload(Task.author),
+            joinedload(Task.authors),
             joinedload(Task.topics),
             joinedload(Task.subtopics),
         )
@@ -60,9 +60,9 @@ def get_all_tasks(
 
     needs_author_join = bool(author_ids or sort_by == "author")
     if needs_author_join:
-        # LEFT JOIN — у задачи автор необязателен (author_id nullable),
-        # обычный join потерял бы все задачи без автора при сортировке
-        query = query.join(Task.author, isouter=True)
+        # LEFT JOIN — у задачи авторов может не быть вовсе (0 записей в task_author),
+        # обычный join потерял бы все такие задачи при сортировке
+        query = query.join(Task.authors, isouter=True)
 
     # --- фильтр по конкретным годам олимпиады (приоритетнее диапазона; атрибут задачи) ---
     if years:
@@ -122,7 +122,7 @@ def get_task(db: Session, task_id: int):
         db.query(Task)
         .options(
             joinedload(Task.source),
-            joinedload(Task.author),
+            joinedload(Task.authors),
             joinedload(Task.topics),
             joinedload(Task.subtopics),
         )
@@ -133,8 +133,9 @@ def get_task(db: Session, task_id: int):
 
 def create_task(db: Session, task: TaskCreate, user_id: int):
     """
-    Создаёт задачу. Видимый автор (author_id) — опционален.
-    created_by_user_id — внутренний автор (кто добавил в БД).
+    Создаёт задачу. Видимые авторы (author_ids) — опциональны, может быть
+    несколько (соавторство). created_by_user_id — внутренний автор (кто
+    добавил задачу в БД, не путать с автором самой задачи).
     """
     db_task = Task(
         title=task.title,
@@ -145,14 +146,13 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
         grade=task.grade,
         year=task.year,
         source_id=task.source_id,
-        author_id=getattr(task, "author_id", None),
         created_by_user_id=user_id,
     )
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
 
-    # привязка тем/подтем
+    # привязка тем/подтем/авторов
     if task.topic_ids:
         topics = db.query(Topic).filter(Topic.id.in_(task.topic_ids)).all()
         db_task.topics.extend(topics)
@@ -160,6 +160,10 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
     if task.subtopic_ids:
         subs = db.query(Subtopic).filter(Subtopic.id.in_(task.subtopic_ids)).all()
         db_task.subtopics.extend(subs)
+
+    if task.author_ids:
+        authors = db.query(Author).filter(Author.id.in_(task.author_ids)).all()
+        db_task.authors.extend(authors)
 
     # Начисляем люмину
     user = db.query(User).filter(User.id == user_id).first()
@@ -199,13 +203,15 @@ def update_task(db: Session, db_task: Task, task: TaskCreate):
     db_task.grade = task.grade
     db_task.year = task.year
     db_task.source_id = task.source_id
-    db_task.author_id = task.author_id
 
     topics = db.query(Topic).filter(Topic.id.in_(task.topic_ids)).all() if task.topic_ids else []
     db_task.topics = topics
 
     subs = db.query(Subtopic).filter(Subtopic.id.in_(task.subtopic_ids)).all() if task.subtopic_ids else []
     db_task.subtopics = subs
+
+    authors = db.query(Author).filter(Author.id.in_(task.author_ids)).all() if task.author_ids else []
+    db_task.authors = authors
 
     db.commit()
     db.refresh(db_task)
@@ -220,7 +226,7 @@ def get_tasks_by_ids(db: Session, task_ids: List[int]):
         db.query(Task)
         .options(
             joinedload(Task.source),
-            joinedload(Task.author),
+            joinedload(Task.authors),
             joinedload(Task.topics),
             joinedload(Task.subtopics),
         )

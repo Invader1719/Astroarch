@@ -12,7 +12,7 @@ interface Task {
   answer?: string
   grade: number
   year: number
-  author?: { id: number; name: string } | null
+  authors?: { id: number; name: string }[]
   source?: {
     name: string
   }
@@ -142,9 +142,9 @@ export default function TaskDetailPage() {
           </p>
         )}
 
-        {task.author && (
+        {task.authors && task.authors.length > 0 && (
           <p className="text-sm text-white/70">
-            Автор: {task.author.name}
+            {task.authors.length > 1 ? "Авторы" : "Автор"}: {task.authors.map(a => a.name).join(", ")}
           </p>
         )}
       </div>

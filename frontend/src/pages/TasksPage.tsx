@@ -11,7 +11,7 @@ type ApiTask = {
   year: number
   created_at: string
   source?: { id: number; name: string }
-  author?: { id: number; name: string }
+  authors?: { id: number; name: string }[]
   topics: { id: number; name: string }[]
   subtopics: { id: number; name: string; topic_id: number }[]
 }
@@ -24,7 +24,7 @@ type Task = {
   year: number
   sourceName?: string    // <— явное имя источника
   grade?: number         // <— класс
-  authorName?: string    // <— автор задачи
+  authorName?: string    // <— авторы задачи (через запятую, если несколько)
 }
 
 type Source = { id: number; name: string }
@@ -215,13 +215,15 @@ export default function TasksPage() {
             `${t.grade} класс`,
             ...(t.topics?.map(topic => topic.name) || []),
             ...(t.subtopics?.map(sub => sub.name) || []),
-            t.author?.name ? `Автор: ${t.author.name}` : "",
+            t.authors && t.authors.length > 0
+              ? `${t.authors.length > 1 ? "Авторы" : "Автор"}: ${t.authors.map(a => a.name).join(", ")}`
+              : "",
             `Сложность: ${t.difficulty}`,
           ].filter(Boolean),
           year: t.year,
           sourceName: t.source?.name,
           grade: t.grade,
-          authorName: t.author?.name,
+          authorName: t.authors?.map(a => a.name).join(", "),
         }))
         setTasks(mapped)
         // ✅ по умолчанию выбираем все задачи текущей выдачи

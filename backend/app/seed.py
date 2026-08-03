@@ -46,7 +46,6 @@ def seed_if_empty(db: Session) -> None:
             subtopic_by_key[(topic_name, subtopic_name)] = subtopic
 
     for item in TASKS:
-        author_key = item.get("author_key")
         task = Task(
             title=item.get("title"),
             text=item["text"],
@@ -56,12 +55,20 @@ def seed_if_empty(db: Session) -> None:
             grade=item["grade"],
             year=item["year"],
             source_id=source_by_key[item["source_key"]].id,
-            author_id=author_by_key[author_key].id if author_key else None,
         )
         db.add(task)
         db.flush()
 
         task.topics.append(topic_by_name[item["topic"]])
+
+        # авторы — item["author_keys"] (список, соавторство) или старое
+        # единственное число item["author_key"] для обратной совместимости
+        author_keys = item.get("author_keys")
+        if author_keys is None:
+            single = item.get("author_key")
+            author_keys = [single] if single else []
+        for author_key in author_keys:
+            task.authors.append(author_by_key[author_key])
 
         subtopic_names = item.get("subtopics")
         if subtopic_names is None:

@@ -13,6 +13,7 @@ from app.models import (
     subtopic,
     task_topic,
     task_subtopic,
+    task_author,
     user,
     author,
     task_suggestion

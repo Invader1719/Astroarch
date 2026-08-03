@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class Author(Base):
@@ -8,4 +7,4 @@ class Author(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False, index=True)
 
-    tasks = relationship("Task", back_populates="author")
+    # обратная сторона Task.authors (secondary=task_author) — см. app/models/task.py

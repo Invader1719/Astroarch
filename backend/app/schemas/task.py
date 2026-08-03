@@ -33,7 +33,7 @@ class TaskBase(BaseModel):
     grade: int                                      # класс — обязателен
     year: int                                       # год олимпиады — обязателен
     source_id: int
-    author_id: Optional[int] = None
+    author_ids: List[int] = Field(default_factory=list)
     topic_ids: List[int] = Field(default_factory=list)
     subtopic_ids: List[int] = Field(default_factory=list)
 
@@ -53,7 +53,7 @@ class TaskOut(BaseModel):
     answer: Optional[str] = None
 
     source: Optional[SourceShort] = None
-    author: Optional[AuthorShort] = None           # ← заменили str на объект
+    authors: List[AuthorShort] = Field(default_factory=list)   # соавторство — может быть несколько
     topics: List[TopicShort] = Field(default_factory=list)
     subtopics: List[SubtopicShort] = Field(default_factory=list)
 

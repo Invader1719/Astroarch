@@ -13,7 +13,7 @@ type ApiTask = {
   grade: number;
   year: number;
   source?: { id: number; name: string } | null;
-  author?: { id: number; name: string } | null;
+  authors?: { id: number; name: string }[];
   topics: { id: number; name: string }[];
   subtopics: { id: number; name: string; topic_id: number }[];
 };
@@ -83,7 +83,7 @@ export default function EditTaskPage() {
         grade: task.grade,
         year: task.year,
         sourceId: task.source?.id ?? "",
-        authorId: task.author?.id ?? "",
+        authorIds: task.authors?.map((a) => a.id) ?? [],
         topicIds: task.topics?.map((t) => t.id) ?? [],
         subtopicIds: task.subtopics?.map((s) => s.id) ?? [],
       }}
