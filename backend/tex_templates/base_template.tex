@@ -15,6 +15,11 @@
 \usepackage{graphicx,wrapfig,caption,float}
 \usepackage{titlesec}
 \usepackage{wasysym}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+% Малиновый — цвет ссылки на сайт в колонтитуле
+\definecolor{astroarchpink}{HTML}{E3116C}
 
 % Заголовки — компактные
 \titleformat{\section}{\normalfont\large\bfseries}{\thesection:}{0.5em}{}
@@ -41,7 +46,7 @@
 \rhead{Страница \thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \lfoot{Тема: {{ topic_label }}}
-\cfoot{Astroarch}
+\cfoot{\href{https://astroarch.ru/}{\textcolor{astroarchpink}{Astroarch}}}
 \rfoot{Станислав Потапов}
 \renewcommand{\footrulewidth}{0.4pt}
 
