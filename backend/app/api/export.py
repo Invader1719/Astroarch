@@ -32,6 +32,7 @@ def export_tex(
 
     buf = build_tex_zip(
         tasks,
+        db,
         meta=None,
         zip_name="tasks_tex.zip",
         include_source=payload.include_source,
@@ -56,6 +57,7 @@ def export_tex_file(
 
     content = build_standalone_tex(
         tasks,
+        db,
         include_source=payload.include_source,
         include_answer=payload.include_answer,
         include_solution=payload.include_solution,

@@ -53,7 +53,7 @@ def generate_pdf(
     tex_path = os.path.join("generated", f"{filename}.tex")
 
     generate_tex_file(
-        tasks, tex_path,
+        tasks, tex_path, db,
         include_source=include_source,
         include_answer=include_answer,
         include_solution=include_solution,

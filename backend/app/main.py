@@ -17,7 +17,8 @@ from app.models import (
     user,
     author,
     task_suggestion,
-    progress_checkpoint
+    progress_checkpoint,
+    task_image
 )
 
 # Импорт роутеров
@@ -30,7 +31,8 @@ from app.api import (
     author as author_api,
     user as user_api,
     suggestion as suggestion_api,
-    progress as progress_api
+    progress as progress_api,
+    task_image as task_image_api
 )
 
 app = FastAPI()
@@ -52,6 +54,7 @@ app.include_router(author_api.router)
 app.include_router(user_api.router)
 app.include_router(suggestion_api.router)
 app.include_router(progress_api.router)
+app.include_router(task_image_api.router)
 app.include_router(auth.router, prefix="/auth")
 
 app.add_middleware(

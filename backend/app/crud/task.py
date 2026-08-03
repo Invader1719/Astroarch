@@ -10,6 +10,7 @@ from app.models.source import Source
 from app.models.author import Author
 from app.models.user import User
 from app.schemas.task import TaskCreate
+from app.crud.task_image import attach_images_to_task
 
 
 SORTABLE_FIELDS = {
@@ -185,6 +186,9 @@ def create_task(db: Session, task: TaskCreate, user_id: int):
 
     db.commit()
     db.refresh(db_task)
+
+    attach_images_to_task(db, db_task.id, [db_task.text, db_task.solution, db_task.answer])
+
     return db_task
 
 
@@ -215,6 +219,9 @@ def update_task(db: Session, db_task: Task, task: TaskCreate):
 
     db.commit()
     db.refresh(db_task)
+
+    attach_images_to_task(db, db_task.id, [db_task.text, db_task.solution, db_task.answer])
+
     return db_task
 
 

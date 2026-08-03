@@ -32,7 +32,11 @@ export default function TaskCard({ title, text, tags, id, selected, toggleSelect
                 {title}
               </p>
             )}
-            <LatexContent text={text} className="text-xl font-semibold mb-2" />
+            <LatexContent
+              text={text}
+              className="text-xl font-semibold mb-2"
+              imageCaption={title ? `К задаче «${title}»` : "К задаче"}
+            />
             <div className="flex flex-wrap gap-2 mb-3">
               {tags.map((tag, i) => (
                 <span key={i} className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">

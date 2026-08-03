@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 type Source = { id: number; name: string };
 type Topic = { id: number; name: string };
@@ -44,12 +45,81 @@ const inputClass =
   "w-full bg-zinc-900 text-white border border-white/20 rounded px-3 py-2 focus:outline-none focus:border-blue-400";
 const labelClass = "block mb-1 font-semibold text-white";
 
+type ImageField = "text" | "solution" | "answer";
+
 export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Props) {
+  const { token: authToken } = useAuth();
+
   // поля формы
   const [title, setTitle] = useState(initial?.title ?? "");
   const [text, setText] = useState(initial?.text ?? "");
   const [solution, setSolution] = useState(initial?.solution ?? "");
   const [answer, setAnswer] = useState(initial?.answer ?? "");
+
+  // вставка картинок в текст/решение/ответ — по кнопке рядом с полем,
+  // сама картинка сразу грузится на сервер, в текст вставляется токен
+  // [[img:ID|width=0.7]] в позицию курсора (см. app/services/task_images.py)
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const solutionRef = useRef<HTMLTextAreaElement>(null);
+  const answerRef = useRef<HTMLInputElement>(null);
+  const fileInputRefs = {
+    text: useRef<HTMLInputElement>(null),
+    solution: useRef<HTMLInputElement>(null),
+    answer: useRef<HTMLInputElement>(null),
+  };
+  const [uploadingField, setUploadingField] = useState<ImageField | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const insertAtCursor = (
+    el: HTMLTextAreaElement | HTMLInputElement | null,
+    value: string,
+    setValue: (v: string) => void,
+    token: string
+  ) => {
+    if (!el) {
+      setValue(value + token);
+      return;
+    }
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + token + value.slice(end);
+    setValue(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  const handleImageUpload = async (
+    field: ImageField,
+    file: File,
+    el: HTMLTextAreaElement | HTMLInputElement | null,
+    value: string,
+    setValue: (v: string) => void
+  ) => {
+    setUploadError(null);
+    setUploadingField(field);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/task-images/", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `Ошибка загрузки: ${res.status}`);
+      }
+      const data = await res.json();
+      insertAtCursor(el, value, setValue, `[[img:${data.id}|width=0.7]]`);
+    } catch (e: any) {
+      setUploadError(e.message || "Не удалось загрузить картинку");
+    } finally {
+      setUploadingField(null);
+    }
+  };
   const [difficulty, setDifficulty] = useState(initial?.difficulty ?? 1);
   const [grade, setGrade] = useState<number | "">(initial?.grade ?? "");
   const [sourceId, setSourceId] = useState<number | "">(initial?.sourceId ?? "");
@@ -162,10 +232,34 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
           />
         </div>
 
+        {uploadError && <p className="text-red-400 text-sm">{uploadError}</p>}
+
         {/* Условие */}
         <div>
-          <label className={labelClass}>Условие</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className={"font-semibold text-white"}>Условие</label>
+            <button
+              type="button"
+              onClick={() => fileInputRefs.text.current?.click()}
+              disabled={uploadingField === "text"}
+              className="text-xs px-2 py-1 rounded border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition disabled:opacity-50"
+            >
+              {uploadingField === "text" ? "Загружаем..." : "🖼 Вставить картинку"}
+            </button>
+            <input
+              ref={fileInputRefs.text}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload("text", file, textRef.current, text, setText);
+                e.target.value = "";
+              }}
+            />
+          </div>
           <textarea
+            ref={textRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             className={inputClass}
@@ -176,8 +270,30 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
 
         {/* Решение */}
         <div>
-          <label className={labelClass}>Решение (необязательно)</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className={"font-semibold text-white"}>Решение (необязательно)</label>
+            <button
+              type="button"
+              onClick={() => fileInputRefs.solution.current?.click()}
+              disabled={uploadingField === "solution"}
+              className="text-xs px-2 py-1 rounded border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition disabled:opacity-50"
+            >
+              {uploadingField === "solution" ? "Загружаем..." : "🖼 Вставить картинку"}
+            </button>
+            <input
+              ref={fileInputRefs.solution}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload("solution", file, solutionRef.current, solution, setSolution);
+                e.target.value = "";
+              }}
+            />
+          </div>
           <textarea
+            ref={solutionRef}
             value={solution}
             onChange={(e) => setSolution(e.target.value)}
             className={inputClass}
@@ -187,8 +303,30 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
 
         {/* Ответ */}
         <div>
-          <label className={labelClass}>Ответ (необязательно)</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className={"font-semibold text-white"}>Ответ (необязательно)</label>
+            <button
+              type="button"
+              onClick={() => fileInputRefs.answer.current?.click()}
+              disabled={uploadingField === "answer"}
+              className="text-xs px-2 py-1 rounded border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition disabled:opacity-50"
+            >
+              {uploadingField === "answer" ? "Загружаем..." : "🖼 Вставить картинку"}
+            </button>
+            <input
+              ref={fileInputRefs.answer}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload("answer", file, answerRef.current, answer, setAnswer);
+                e.target.value = "";
+              }}
+            />
+          </div>
           <input
+            ref={answerRef}
             type="text"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}

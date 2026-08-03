@@ -4,10 +4,11 @@ import { renderLatexHtml } from "@/lib/latex"
 type Props = {
   text?: string | null
   className?: string
+  imageCaption?: string | null
 }
 
-export default function LatexContent({ text, className }: Props) {
-  const html = useMemo(() => renderLatexHtml(text || ""), [text])
+export default function LatexContent({ text, className, imageCaption }: Props) {
+  const html = useMemo(() => renderLatexHtml(text || "", imageCaption), [text, imageCaption])
   const ref = useRef<HTMLDivElement>(null)
 
   // Выделение внутри отрендеренной таблицы (KaTeX-формулы в ячейках + HTML-разметка

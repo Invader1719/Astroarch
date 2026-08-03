@@ -1,7 +1,13 @@
 # app/services/tex_export.py
+import os
 from io import BytesIO
 from zipfile import ZipFile, ZIP_DEFLATED
-from typing import Iterable, Optional, Dict
+from typing import Iterable, Optional, Dict, List
+
+from sqlalchemy.orm import Session
+
+from app.services.task_images import UPLOAD_DIR, build_caption, find_image_ids, replace_image_tokens
+from app.crud.task_image import get_task_image
 
 # ===== 1) Фиксированный header.tex =====
 HEADER_TEX = r"""
@@ -21,6 +27,7 @@ HEADER_TEX = r"""
 \usepackage{enumitem}
 \usepackage{fancyhdr}
 \usepackage{graphicx}
+\usepackage{needspace}
 \usepackage{titlesec}
 
 % Заголовки — компактные
@@ -38,7 +45,7 @@ HEADER_TEX = r"""
 % Макрос для красивого оформления источника
 \newcommand{\source}[1]{\textit{(#1)}}
 
-\usepackage{graphicx,wrapfig,caption,float} % про картинки
+\usepackage{graphicx,caption} % про картинки
 
 % компактные отступы вокруг обтекаемых рисунков и расстояние между колонками
 \setlength{\intextsep}{0.5em}
@@ -144,9 +151,23 @@ def build_source_label(task) -> str:
     return ""
 
 
+def _image_path_resolver(db: Session):
+    """
+    Для ZIP/.tex-экспорта картинка компилируется НЕ на нашем сервере —
+    поэтому \includegraphics должен ссылаться на относительное имя файла
+    (лежит рядом с .tex внутри архива), а не на абсолютный путь на сервере,
+    см. build_tex_zip.
+    """
+    def _resolve(image_id: int) -> Optional[str]:
+        img = get_task_image(db, image_id)
+        return img.filename if img else None
+    return _resolve
+
+
 def format_task_block(
     idx: int,
     task,
+    db: Session,
     include_source: bool = True,
     include_answer: bool = False,
     include_solution: bool = False,
@@ -163,20 +184,40 @@ def format_task_block(
         prefix += rf" \textbf{{{tex_escape(title)}}}."
     if source_label:
         prefix += rf" \source{{{tex_escape(source_label)}}}"
+
+    caption = build_caption(idx, tex_escape(title) if title else None)
+    path_for_id = _image_path_resolver(db)
+
     # task.text/answer/solution уже хранятся как LaTeX-код (см. app/seed_data.py), поэтому не экранируем
     statement = getattr(task, "statement", "") or getattr(task, "text", "")
+    statement = replace_image_tokens(statement, path_for_id, caption)
     block = prefix + " " + statement
     answer = getattr(task, "answer", None)
     if include_answer and answer:
+        answer = replace_image_tokens(answer, path_for_id, caption)
         block += "\n\n" + rf"\vspace{{0.5em}}\noindent{{\itshape Ответ: {answer}\par}}"
     solution = getattr(task, "solution", None)
     if include_solution and solution:
+        solution = replace_image_tokens(solution, path_for_id, caption)
         block += "\n\n" + rf"\vspace{{0.5em}}\noindent{{\itshape Решение: {solution}\par}}"
     return block + "\n\\vspace{0.5em}\n"
 
 
+def _collect_image_ids(tasks: Iterable, include_answer: bool, include_solution: bool):
+    """Только id картинок, которые реально попадут в вывод (с учётом include_*)."""
+    ids = set()
+    for t in tasks:
+        ids |= find_image_ids(getattr(t, "text", None))
+        if include_answer:
+            ids |= find_image_ids(getattr(t, "answer", None))
+        if include_solution:
+            ids |= find_image_ids(getattr(t, "solution", None))
+    return ids
+
+
 def build_main_tex(
     tasks: Iterable,
+    db: Session,
     meta: Optional[Dict[str, str]] = None,
     include_source: bool = True,
     include_answer: bool = False,
@@ -188,7 +229,7 @@ def build_main_tex(
     # Хочешь — сюда добавь динамику колонтитулов, прописав \lhead и т.д. через \fancypagestyle
     tasks_tex = []
     for i, t in enumerate(tasks, start=1):
-        tasks_tex.append(format_task_block(i, t, include_source, include_answer, include_solution))
+        tasks_tex.append(format_task_block(i, t, db, include_source, include_answer, include_solution))
 
     body = "".join(tasks_tex)
     return (
@@ -202,6 +243,7 @@ def build_main_tex(
 
 def build_standalone_tex(
     tasks: Iterable,
+    db: Session,
     meta: Optional[Dict[str, str]] = None,
     include_source: bool = True,
     include_answer: bool = False,
@@ -211,10 +253,15 @@ def build_standalone_tex(
     Один самодостаточный .tex файл — шапка вшита прямо в документ, без
     отдельного header.tex (для кнопки "Скачать LaTeX", в отличие от
     build_tex_zip, который кладёт шапку отдельным файлом в архив).
+
+    ВАЖНО: если в задачах есть картинки — сами файлы сюда НЕ прикладываются
+    (это один файл, не архив), \includegraphics будет ссылаться на
+    несуществующий у пользователя файл. Для задач с картинками используйте
+    build_tex_zip.
     """
     tasks = list(tasks)
     body = "".join(
-        format_task_block(i, t, include_source, include_answer, include_solution)
+        format_task_block(i, t, db, include_source, include_answer, include_solution)
         for i, t in enumerate(tasks, start=1)
     )
     return (
@@ -229,6 +276,7 @@ def build_standalone_tex(
 # ===== 4) Собираем ZIP =====
 def build_tex_zip(
     tasks: Iterable,
+    db: Session,
     meta: Optional[Dict[str, str]] = None,
     zip_name: str = "tasks_tex.zip",
     include_source: bool = True,
@@ -239,6 +287,18 @@ def build_tex_zip(
     buf = BytesIO()
     with ZipFile(buf, "w", ZIP_DEFLATED) as zf:
         zf.writestr("header.tex", render_header_tex(compute_topic_label(tasks)) + "\n")
-        zf.writestr("main.tex", build_main_tex(tasks, meta, include_source, include_answer, include_solution))
+        zf.writestr(
+            "main.tex",
+            build_main_tex(tasks, db, meta, include_source, include_answer, include_solution),
+        )
+        # кладём сами файлы картинок рядом с .tex, чтобы архив компилировался
+        # автономно у пользователя (без доступа к нашему серверу)
+        for image_id in _collect_image_ids(tasks, include_answer, include_solution):
+            img = get_task_image(db, image_id)
+            if not img:
+                continue
+            path = os.path.join(UPLOAD_DIR, img.filename)
+            if os.path.isfile(path):
+                zf.write(path, img.filename)
     buf.seek(0)
     return buf

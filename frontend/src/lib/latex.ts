@@ -22,12 +22,16 @@ function renderMath(expr: string, displayMode: boolean): string {
  *
  * Это не полноценный LaTeX-движок — поддерживается только то, что реально
  * встречается в текстах задач (см. app/seed_data.py на бэкенде).
+ *
+ * imageCaption — подпись под картинками [[img:ID|width=W]] (одна на весь
+ * текст — обычно "К задаче «Название»"), см. app/services/task_images.py
+ * на бэкенде, где живёт тот же токен для PDF/TeX-экспорта.
  */
-export function renderLatexHtml(raw: string): string {
+export function renderLatexHtml(raw: string, imageCaption?: string | null): string {
   if (!raw) return ""
 
-  // Блочные куски (формулы, списки, таблицы) прячем за токенами, чтобы
-  // последующая разбивка на параграфы не резала их по живому.
+  // Блочные куски (формулы, списки, таблицы, картинки) прячем за токенами,
+  // чтобы последующая разбивка на параграфы не резала их по живому.
   const blocks: string[] = []
   const stash = (html: string) => {
     const token = "@@BLOCK" + blocks.length + "@@"
@@ -37,6 +41,25 @@ export function renderLatexHtml(raw: string): string {
 
   // 1) экранируем HTML — всё, что не наша разметка, должно остаться текстом
   let s = raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+  // 1.5) картинки [[img:ID|width=W]] — без floats, встают прямо в поток
+  // текста той же последовательностью, что и в PDF (см. task_images.py)
+  const escapedCaption = (imageCaption || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+  s = s.replace(/\[\[img:(\d+)(?:\|width=([0-9.]+))?\]\]/g, (_, id: string, width?: string) => {
+    const pct = Math.round(Number(width || "0.7") * 100)
+    const captionHtml = escapedCaption
+      ? `<figcaption class="text-sm text-white/60 mt-1 text-center">${escapedCaption}</figcaption>`
+      : ""
+    return stash(
+      `<figure class="my-4 mx-auto text-center" style="max-width:${pct}%">` +
+        `<img src="/api/task-images/${id}" alt="" class="max-w-full h-auto mx-auto rounded" />` +
+        captionHtml +
+        `</figure>`
+    )
+  })
 
   // 2) формулы — сначала блочные, потом строчные
   s = s.replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => stash(renderMath(expr, true)))

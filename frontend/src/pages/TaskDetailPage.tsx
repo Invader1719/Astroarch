@@ -48,6 +48,7 @@ export default function TaskDetailPage() {
   }, [id])
 
   const canEdit = !!user && ["admin", "moderator", "founder"].includes(user.role)
+  const imageCaption = task ? (task.title ? `К задаче «${task.title}»` : "К задаче") : undefined
 
   const handleDelete = async () => {
     if (!task) return
@@ -134,7 +135,7 @@ export default function TaskDetailPage() {
           <h1 className="text-2xl font-bold">Условие задачи</h1>
           <CopyLatexButton text={task.text} />
         </div>
-        <LatexContent text={task.text} className="leading-relaxed" />
+        <LatexContent text={task.text} className="leading-relaxed" imageCaption={imageCaption} />
 
         {task.source && (
           <p className="text-sm text-white/70">
@@ -155,7 +156,7 @@ export default function TaskDetailPage() {
             <h2 className="text-xl font-semibold">Решение</h2>
             <CopyLatexButton text={task.solution} />
           </div>
-          <LatexContent text={task.solution} className="leading-relaxed" />
+          <LatexContent text={task.solution} className="leading-relaxed" imageCaption={imageCaption} />
         </div>
       )}
 
@@ -165,7 +166,7 @@ export default function TaskDetailPage() {
             <h2 className="text-xl font-semibold">Ответ</h2>
             <CopyLatexButton text={task.answer} />
           </div>
-          <LatexContent text={task.answer} className="leading-relaxed" />
+          <LatexContent text={task.answer} className="leading-relaxed" imageCaption={imageCaption} />
         </div>
       )}
 
