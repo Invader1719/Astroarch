@@ -20,7 +20,7 @@ type ApiTask = {
 
 export default function EditTaskPage() {
   const { id } = useParams();
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
 
   const [task, setTask] = useState<ApiTask | null>(null);
@@ -57,6 +57,10 @@ export default function EditTaskPage() {
     });
 
     if (!res.ok) {
+      if (res.status === 401) {
+        logout();
+        throw new Error("Сессия истекла — войдите заново и повторите сохранение");
+      }
       const data = await res.json().catch(() => ({}));
       console.error(`PATCH /api/tasks/${id} →`, res.status, data);
       throw new Error(data.detail || "Ошибка сохранения задачи");

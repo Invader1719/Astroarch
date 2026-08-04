@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import TaskForm, { type TaskPayload } from "@/components/TaskForm";
 
 export default function AddTaskPage() {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
 
   // доступ только для админов/модераторов
@@ -26,6 +26,10 @@ export default function AddTaskPage() {
     });
 
     if (!res.ok) {
+      if (res.status === 401) {
+        logout();
+        throw new Error("Сессия истекла — войдите заново и повторите сохранение");
+      }
       const data = await res.json().catch(() => ({}));
       console.error("POST /api/tasks/ →", res.status, data);
       throw new Error(data.detail || "Ошибка добавления задачи");

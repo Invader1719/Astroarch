@@ -50,7 +50,7 @@ const GRADE_OPTIONS = [5, 6, 7, 8, 9, 10, 11];
 type ImageField = "text" | "solution" | "answer";
 
 export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Props) {
-  const { token: authToken } = useAuth();
+  const { token: authToken, logout } = useAuth();
 
   // поля формы
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -111,6 +111,10 @@ export default function TaskForm({ heading, submitLabel, initial, onSubmit }: Pr
         body: formData,
       });
       if (!res.ok) {
+        if (res.status === 401) {
+          logout();
+          throw new Error("Сессия истекла — войдите заново и повторите загрузку картинки");
+        }
         const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || `Ошибка загрузки: ${res.status}`);
       }
