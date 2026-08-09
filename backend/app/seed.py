@@ -3,6 +3,8 @@
 Наполняет пустую базу стартовым набором задач при первом запуске проекта.
 Идемпотентно: если в таблице tasks уже что-то есть, ничего не делает.
 """
+import os
+
 from sqlalchemy.orm import Session
 
 from app.models.source import Source
@@ -10,12 +12,40 @@ from app.models.topic import Topic
 from app.models.subtopic import Subtopic
 from app.models.author import Author
 from app.models.task import Task
+from app.models.task_image import TaskImage
 from app.seed_data import SOURCES, AUTHORS, TOPICS, TASKS
+from app.services.task_images import UPLOAD_DIR
+
+# Картинки задач-сидов лежат рядом с backend/ (не в uploads/ — тот не
+# коммитится в git); при пересоздании БД восстанавливаем их отсюда.
+SEED_ASSETS_DIR = "seed_assets/mao"
+
+
+def _seed_task_image(db: Session, key: str, cache: dict) -> int:
+    """Создаёт TaskImage из файла seed_assets/mao/<key>.png, копирует его в
+    uploads/task_images и возвращает id — идемпотентно в рамках одного прогона."""
+    if key in cache:
+        return cache[key]
+    src_path = os.path.join(SEED_ASSETS_DIR, f"{key}.png")
+    with open(src_path, "rb") as f:
+        data = f.read()
+    img = TaskImage(filename="", content_type="image/png", size=len(data))
+    db.add(img)
+    db.flush()
+    filename = f"{img.id}.png"
+    with open(os.path.join(UPLOAD_DIR, filename), "wb") as f:
+        f.write(data)
+    img.filename = filename
+    db.flush()
+    cache[key] = img.id
+    return img.id
 
 
 def seed_if_empty(db: Session) -> None:
     if db.query(Task.id).first() is not None:
         return
+
+    image_cache: dict = {}
 
     source_by_key = {}
     for key, fields in SOURCES.items():
@@ -46,9 +76,14 @@ def seed_if_empty(db: Session) -> None:
             subtopic_by_key[(topic_name, subtopic_name)] = subtopic
 
     for item in TASKS:
+        text = item["text"]
+        image_ids = [_seed_task_image(db, key, image_cache) for key in item.get("images", [])]
+        for image_id in image_ids:
+            text += f"\n[[img:{image_id}|width=0.7]]"
+
         task = Task(
             title=item.get("title"),
-            text=item["text"],
+            text=text,
             solution=item.get("solution"),
             answer=item.get("answer"),
             difficulty=item["difficulty"],
@@ -60,6 +95,11 @@ def seed_if_empty(db: Session) -> None:
         )
         db.add(task)
         db.flush()
+
+        if image_ids:
+            db.query(TaskImage).filter(TaskImage.id.in_(image_ids)).update(
+                {"task_id": task.id}, synchronize_session=False
+            )
 
         task.topics.append(topic_by_name[item["topic"]])
 
