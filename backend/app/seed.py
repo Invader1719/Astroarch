@@ -18,15 +18,21 @@ from app.services.task_images import UPLOAD_DIR
 
 # Картинки задач-сидов лежат рядом с backend/ (не в uploads/ — тот не
 # коммитится в git); при пересоздании БД восстанавливаем их отсюда.
-SEED_ASSETS_DIR = "seed_assets/mao"
+# Старые (МАО) картинки лежат в seed_assets/mao/, новые — прямо в
+# seed_assets/; при поиске пробуем оба места.
+SEED_ASSETS_DIR = "seed_assets"
+SEED_ASSETS_DIR_LEGACY = "seed_assets/mao"
 
 
 def _seed_task_image(db: Session, key: str, cache: dict) -> int:
-    """Создаёт TaskImage из файла seed_assets/mao/<key>.png, копирует его в
-    uploads/task_images и возвращает id — идемпотентно в рамках одного прогона."""
+    """Создаёт TaskImage из файла seed_assets/<key>.png (или, для старых
+    записей, seed_assets/mao/<key>.png), копирует его в uploads/task_images
+    и возвращает id — идемпотентно в рамках одного прогона."""
     if key in cache:
         return cache[key]
     src_path = os.path.join(SEED_ASSETS_DIR, f"{key}.png")
+    if not os.path.exists(src_path):
+        src_path = os.path.join(SEED_ASSETS_DIR_LEGACY, f"{key}.png")
     with open(src_path, "rb") as f:
         data = f.read()
     img = TaskImage(filename="", content_type="image/png", size=len(data))
