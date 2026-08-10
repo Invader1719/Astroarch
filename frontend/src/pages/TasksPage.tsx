@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import TaskCard from "@/components/TaskCard"
 import { Button } from "@/components/ui/button"
 
@@ -166,15 +166,66 @@ function formatGrades(grades: number[]): string {
   return isRange ? `${g[0]}–${g[g.length - 1]} классы` : `${g.join(", ")} классы`
 }
 
+// Для подписей "(N)" у фильтров: задача проходит в счёт фасета, только если
+// подходит под ВСЕ остальные активные фильтры — свой же фасет в проверку не
+// включаем, иначе внутри одной категории всё, кроме выбранного, схлопнется в 0.
+type FacetFilters = {
+  sources?: string[]
+  grades?: number[]
+  topics?: number[]
+  subtopics?: number[]
+  authors?: number[]
+}
+
+function taskMatchesFacets(t: ApiTask, f: FacetFilters): boolean {
+  if (f.sources && f.sources.length > 0 && (!t.source || !f.sources.includes(t.source.name))) return false
+  if (f.grades && f.grades.length > 0 && !(t.grades ?? []).some(g => f.grades!.includes(g))) return false
+  if (f.topics && f.topics.length > 0) {
+    const ids = t.topics?.map(x => x.id) ?? []
+    if (!ids.some(id => f.topics!.includes(id))) return false
+  }
+  if (f.subtopics && f.subtopics.length > 0) {
+    const ids = t.subtopics?.map(x => x.id) ?? []
+    if (!ids.some(id => f.subtopics!.includes(id))) return false
+  }
+  if (f.authors && f.authors.length > 0) {
+    const ids = t.authors?.map(x => x.id) ?? []
+    if (!ids.some(id => f.authors!.includes(id))) return false
+  }
+  return true
+}
+
+const PAGE_SIZE = 20
+
+// Компактный список номеров страниц с многоточиями: 1 … 4 5 [6] 7 8 … 42
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  const delta = 2
+  const pages: (number | "...")[] = [1]
+  const start = Math.max(2, current - delta)
+  const end = Math.min(total - 1, current + delta)
+  if (start > 2) pages.push("...")
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (end < total - 1) pages.push("...")
+  if (total > 1) pages.push(total)
+  return pages
+}
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   const [sources, setSources] = useState<Source[]>([])
   const [grades, setGrades] = useState<number[]>([])
   const [topics, setTopics] = useState<Topic[]>([])
   const [subtopics, setSubtopics] = useState<Subtopic[]>([])
   const [authors, setAuthors] = useState<Author[]>([])
+
+  // Для подписей "(N)" у каждого фильтра — сколько всего задач подходит под
+  // значение, вне зависимости от остальных выбранных фильтров. Грузим один раз
+  // весь список задач отдельно от основного (тот меняется вместе с фильтрами).
+  const [countsTasks, setCountsTasks] = useState<ApiTask[]>([])
 
   const [initialFilters] = useState(loadStoredFilters)
   // если год уже был восстановлен из sessionStorage — не даём эффекту ниже
@@ -208,6 +259,9 @@ export default function TasksPage() {
   const [includeAnswer, setIncludeAnswer] = useState(false)
   const [includeSolution, setIncludeSolution] = useState(false)
 
+  // поиск по автору в списке фильтра — локальный UI‑стейт, в sessionStorage не сохраняем
+  const [authorSearch, setAuthorSearch] = useState("")
+
   // поиск по тексту условия — с дебаунсом, чтобы не долбить сервер на каждое нажатие
   const [searchInput, setSearchInput] = useState(initialFilters.searchInput)
   const [search, setSearch] = useState(initialFilters.searchInput.trim())
@@ -223,6 +277,7 @@ export default function TasksPage() {
     fetch(`/api/topics/`).then(r => r.json()).then(setTopics).catch(console.error)
     fetch(`/api/subtopics/`).then(r => r.json()).then(setSubtopics).catch(console.error)
     fetch(`/api/authors/`).then(r => r.json()).then(setAuthors).catch(console.error)
+    fetch(`/api/tasks/`).then(r => r.json()).then(setCountsTasks).catch(console.error)
     fetch(`/api/tasks/years/`)
       .then(r => r.json())
       .then((list: number[]) => {
@@ -234,6 +289,59 @@ export default function TasksPage() {
       })
       .catch(console.error)
   }, [])
+
+  // Сколько задач приходится на каждое значение фильтра — для подписей "(N)".
+  // Каждый счётчик учитывает остальные активные фильтры (фасетный поиск):
+  // выбрал олимпиаду — счётчики авторов/тем/классов пересчитались именно под неё.
+  const sourceCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    const f: FacetFilters = { grades: selectedGrades, topics: selectedTopics, subtopics: selectedSubtopics, authors: selectedAuthors }
+    countsTasks.forEach(t => {
+      if (!taskMatchesFacets(t, f)) return
+      if (t.source?.name) m.set(t.source.name, (m.get(t.source.name) ?? 0) + 1)
+    })
+    return m
+  }, [countsTasks, selectedGrades, selectedTopics, selectedSubtopics, selectedAuthors])
+
+  const gradeCounts = useMemo(() => {
+    const m = new Map<number, number>()
+    const f: FacetFilters = { sources: selectedSources, topics: selectedTopics, subtopics: selectedSubtopics, authors: selectedAuthors }
+    countsTasks.forEach(t => {
+      if (!taskMatchesFacets(t, f)) return
+      t.grades?.forEach(g => m.set(g, (m.get(g) ?? 0) + 1))
+    })
+    return m
+  }, [countsTasks, selectedSources, selectedTopics, selectedSubtopics, selectedAuthors])
+
+  const authorCounts = useMemo(() => {
+    const m = new Map<number, number>()
+    const f: FacetFilters = { sources: selectedSources, grades: selectedGrades, topics: selectedTopics, subtopics: selectedSubtopics }
+    countsTasks.forEach(t => {
+      if (!taskMatchesFacets(t, f)) return
+      t.authors?.forEach(a => m.set(a.id, (m.get(a.id) ?? 0) + 1))
+    })
+    return m
+  }, [countsTasks, selectedSources, selectedGrades, selectedTopics, selectedSubtopics])
+
+  const topicCounts = useMemo(() => {
+    const m = new Map<number, number>()
+    const f: FacetFilters = { sources: selectedSources, grades: selectedGrades, subtopics: selectedSubtopics, authors: selectedAuthors }
+    countsTasks.forEach(t => {
+      if (!taskMatchesFacets(t, f)) return
+      t.topics?.forEach(tp => m.set(tp.id, (m.get(tp.id) ?? 0) + 1))
+    })
+    return m
+  }, [countsTasks, selectedSources, selectedGrades, selectedSubtopics, selectedAuthors])
+
+  const subtopicCounts = useMemo(() => {
+    const m = new Map<number, number>()
+    const f: FacetFilters = { sources: selectedSources, grades: selectedGrades, topics: selectedTopics, authors: selectedAuthors }
+    countsTasks.forEach(t => {
+      if (!taskMatchesFacets(t, f)) return
+      t.subtopics?.forEach(st => m.set(st.id, (m.get(st.id) ?? 0) + 1))
+    })
+    return m
+  }, [countsTasks, selectedSources, selectedGrades, selectedTopics, selectedAuthors])
 
   // Сохраняем фильтры в sessionStorage, чтобы они не слетали при возврате
   // со страницы задачи (TasksPage размонтируется при переходе на /task/:id)
@@ -271,6 +379,7 @@ export default function TasksPage() {
   // Загружаем задачи
   useEffect(() => {
     setIsLoading(true)
+    setPage(1) // новая выдача — всегда начинаем с первой страницы
     const params = new URLSearchParams()
     if (search) params.append("search", search)
     selectedSources.forEach(s => params.append("sources", s))
@@ -346,6 +455,16 @@ export default function TasksPage() {
   }, [search, selectedSources, selectedGrades, selectedTopics, selectedSubtopics, selectedAuthors, yearMode, yearMin, yearMax, selectedYears, allYears, difficultyMode, difficultyMin, difficultyMax, selectedDifficulties, sortBy, sortDir])
 
 
+  const totalPages = Math.max(1, Math.ceil(tasks.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageTasks = tasks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  const goToPage = (p: number) => {
+    const clamped = Math.max(1, Math.min(p, totalPages))
+    setPage(clamped)
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   const toggleSelect = (id: number) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
@@ -368,6 +487,7 @@ export default function TasksPage() {
     setSelectedSubtopics([])
     setExpandedTopics([])
     setSelectedAuthors([])
+    setAuthorSearch("")
     setYearMode("range")
     if (allYears.length > 0) {
       setYearMin(allYears[0])
@@ -579,6 +699,7 @@ export default function TasksPage() {
           onChange={() => toggleFilter(src.name, selectedSources, setSelectedSources)}
         />
         {src.name}
+        <span className="ml-1 text-xs text-white/40">({sourceCounts.get(src.name) ?? 0})</span>
       </label>
     ))}
   </div>
@@ -595,27 +716,89 @@ export default function TasksPage() {
           onChange={() => toggleFilter(g, selectedGrades, setSelectedGrades)}
         />
         {g} класс
+        <span className="ml-1 text-xs text-white/40">({gradeCounts.get(g) ?? 0})</span>
       </label>
     ))}
   </div>
 
   {/* Авторы */}
-  <div>
-    <h2 className="font-semibold mb-2 text-white">Авторы</h2>
+  <div className="rounded-lg border border-white/20 p-3">
+    <h2 className="font-semibold mb-2 text-white flex items-center gap-1.5">
+      Авторы
+      {selectedAuthors.length > 0 && (
+        <span className="text-xs font-normal text-white/50">({selectedAuthors.length})</span>
+      )}
+    </h2>
+
     {authors.length === 0 ? (
       <p className="text-sm text-white/50 italic">Нет данных</p>
     ) : (
-      authors.map(a => (
-        <label key={a.id} className="block text-sm text-white/80">
+      <>
+        {selectedAuthors.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {selectedAuthors.map(id => {
+              const a = authors.find(a => a.id === id)
+              if (!a) return null
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleFilter(id, selectedAuthors, setSelectedAuthors)}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-400 bg-blue-500/40 text-white text-xs font-medium transition hover:bg-blue-500/60"
+                  title="Убрать из выбранных"
+                >
+                  {a.name}
+                  <span className="opacity-70">✕</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="relative mb-2">
           <input
-            type="checkbox"
-            className="mr-2"
-            checked={selectedAuthors.includes(a.id)}
-            onChange={() => toggleFilter(a.id, selectedAuthors, setSelectedAuthors)}
+            type="text"
+            value={authorSearch}
+            onChange={(e) => setAuthorSearch(e.target.value)}
+            placeholder="Поиск автора..."
+            className="w-full bg-zinc-900 border border-white/20 rounded-md px-2.5 py-1.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-blue-400 transition"
           />
-          {a.name}
-        </label>
-      ))
+          {authorSearch && (
+            <button
+              type="button"
+              onClick={() => setAuthorSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-xs"
+              title="Очистить поиск"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-48 overflow-y-auto pr-1 space-y-0.5">
+          {(() => {
+            const q = authorSearch.trim().toLowerCase()
+            const filtered = q
+              ? authors.filter(a => a.name.toLowerCase().includes(q))
+              : authors
+            if (filtered.length === 0) {
+              return <p className="text-sm text-white/50 italic">Никого не найдено</p>
+            }
+            return filtered.map(a => (
+              <label key={a.id} className="block text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  className="mr-2"
+                  checked={selectedAuthors.includes(a.id)}
+                  onChange={() => toggleFilter(a.id, selectedAuthors, setSelectedAuthors)}
+                />
+                {a.name}
+                <span className="ml-1 text-xs text-white/40">({authorCounts.get(a.id) ?? 0})</span>
+              </label>
+            ))
+          })()}
+        </div>
+      </>
     )}
   </div>
 
@@ -690,8 +873,9 @@ export default function TasksPage() {
                   >
                     <span className="font-semibold text-white text-sm">
                       {t.name}
+                      <span className="ml-1.5 text-xs font-normal text-white/45">({topicCounts.get(t.id) ?? 0})</span>
                       {selectedCount > 0 && (
-                        <span className="ml-1.5 text-xs font-normal text-white/60">({selectedCount})</span>
+                        <span className="ml-1.5 text-xs font-semibold text-blue-300">выбрано: {selectedCount}</span>
                       )}
                     </span>
                     <span className="text-white/50 text-xs shrink-0">{isExpanded ? "▲" : "▼"}</span>
@@ -710,6 +894,7 @@ export default function TasksPage() {
                         }`}
                       >
                         {st.name}
+                        <span className="ml-1 opacity-60">({subtopicCounts.get(st.id) ?? 0})</span>
                       </button>
                     ))}
                   </div>
@@ -909,11 +1094,13 @@ export default function TasksPage() {
 
       {exportButtons}
 
-      <div>
+      <div ref={resultsRef} className="scroll-mt-4">
         <span className="inline-block text-sm px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white/80">
           {isLoading
             ? "Загрузка..."
-            : `Найдено задач: ${tasks.length}`}
+            : tasks.length === 0
+              ? "Найдено задач: 0"
+              : `Показано ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, tasks.length)} из ${tasks.length}`}
         </span>
       </div>
 
@@ -921,7 +1108,7 @@ export default function TasksPage() {
         <p className="text-muted-foreground">Ничего не найдено</p>
       ) : (
         <>
-          {tasks.map(task => (
+          {pageTasks.map(task => (
             <TaskCard
               key={task.id}
               {...task}
@@ -929,9 +1116,53 @@ export default function TasksPage() {
               toggleSelect={toggleSelect}
             />
           ))}
+
+          <Pagination page={currentPage} totalPages={totalPages} onGo={goToPage} />
+
           <div className="mt-6">{exportButtons}</div>
         </>
       )}
+    </div>
+  )
+}
+
+function Pagination({ page, totalPages, onGo }: { page: number; totalPages: number; onGo: (p: number) => void }) {
+  if (totalPages <= 1) return null
+
+  const pageBtn = (active: boolean) =>
+    `min-w-[2.25rem] h-9 px-2 rounded-full border text-sm font-semibold transition ${
+      active
+        ? "bg-blue-500 border-blue-400 text-white"
+        : "bg-zinc-900 border-white/20 text-white/70 hover:text-white hover:border-white/40"
+    }`
+  const navBtn =
+    "h-9 px-3 rounded-full border text-sm font-medium transition bg-zinc-900 border-white/20 text-white/70 hover:text-white hover:border-white/40 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-white/70 disabled:hover:border-white/20"
+
+  return (
+    <div className="flex items-center justify-center flex-wrap gap-2 mt-6">
+      <button type="button" className={navBtn} onClick={() => onGo(1)} disabled={page === 1}>
+        « Первая
+      </button>
+      <button type="button" className={navBtn} onClick={() => onGo(page - 1)} disabled={page === 1}>
+        ‹ Пред.
+      </button>
+
+      {getPageNumbers(page, totalPages).map((p, i) =>
+        p === "..." ? (
+          <span key={`ellipsis-${i}`} className="px-1 text-white/40 select-none">…</span>
+        ) : (
+          <button key={p} type="button" className={pageBtn(p === page)} onClick={() => onGo(p)}>
+            {p}
+          </button>
+        )
+      )}
+
+      <button type="button" className={navBtn} onClick={() => onGo(page + 1)} disabled={page === totalPages}>
+        След. ›
+      </button>
+      <button type="button" className={navBtn} onClick={() => onGo(totalPages)} disabled={page === totalPages}>
+        Последняя »
+      </button>
     </div>
   )
 }
