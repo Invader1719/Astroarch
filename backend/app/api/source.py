@@ -52,7 +52,7 @@ def update_source(
     existing = crud_source.get_source_by_name(db, name)
     if existing and existing.id != source_id:
         raise HTTPException(status_code=409, detail="Источник с таким названием уже существует")
-    return crud_source.update_source(db, db_source, name)
+    return crud_source.update_source(db, db_source, name, source.description)
 
 @router.delete("/sources/{source_id}", status_code=204)
 def delete_source(

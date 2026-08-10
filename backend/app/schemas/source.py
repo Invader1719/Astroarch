@@ -1,7 +1,9 @@
+from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 class SourceBase(BaseModel):
     name: str
+    description: Optional[str] = None
 
 class SourceCreate(SourceBase):
     pass

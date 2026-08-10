@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Text
 from app.core.database import Base
 
 class Source(Base):
@@ -9,3 +9,7 @@ class Source(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, unique=True)
+    # необязательное пояснение источника (например, для "МАО. Доп. задачи" —
+    # откуда вообще взялись эти задачи и чем они отличаются от обычных туров
+    # олимпиады); показывается по клику на значок "ⓘ" рядом с источником
+    description = Column(Text, nullable=True)

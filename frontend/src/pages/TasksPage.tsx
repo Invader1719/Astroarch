@@ -27,7 +27,7 @@ type Task = {
   authorName?: string    // <— авторы задачи (через запятую, если несколько)
 }
 
-type Source = { id: number; name: string }
+type Source = { id: number; name: string; description?: string | null }
 type Topic = { id: number; name: string }
 type Subtopic = { id: number; name: string; topic_id: number }
 type Author = { id: number; name: string }
@@ -159,6 +159,22 @@ function loadStoredFilters(): FiltersState {
 }
 
 // Русское склонение по числу: ruPlural(5, ["подтема","подтемы","подтем"]) -> "подтем"
+const URL_RE = /(https?:\/\/[^\s]+)/g
+
+// Рендерит текст с кликабельными ссылками — источники вроде "МАО. Доп. задачи"
+// поясняют себя ссылкой на исходный сборник задач.
+function renderWithLinks(text: string) {
+  return text.split(URL_RE).map((part, i) =>
+    URL_RE.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline hover:text-blue-200 break-all">
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  )
+}
+
 function ruPlural(n: number, forms: [string, string, string]): string {
   const mod10 = n % 10
   const mod100 = n % 100
@@ -270,6 +286,9 @@ export default function TasksPage() {
 
   // поиск по автору в списке фильтра — локальный UI‑стейт, в sessionStorage не сохраняем
   const [authorSearch, setAuthorSearch] = useState("")
+
+  // какой источник сейчас показывает пояснение (значок "ⓘ") — не более одного сразу
+  const [openSourceInfo, setOpenSourceInfo] = useState<number | null>(null)
 
   // поиск по тексту условия — с дебаунсом, чтобы не долбить сервер на каждое нажатие
   const [searchInput, setSearchInput] = useState(initialFilters.searchInput)
@@ -700,16 +719,34 @@ export default function TasksPage() {
   <div>
     <h2 className="font-semibold mb-2 text-white">Олимпиады</h2>
     {sources.map(src => (
-      <label key={src.id} className="block text-sm text-white/80">
-        <input
-          type="checkbox"
-          className="mr-2"
-          checked={selectedSources.includes(src.name)}
-          onChange={() => toggleFilter(src.name, selectedSources, setSelectedSources)}
-        />
-        {src.name}
-        <span className="ml-1 text-xs text-white/40">({sourceCounts.get(src.name) ?? 0})</span>
-      </label>
+      <div key={src.id}>
+        <label className="flex items-center text-sm text-white/80">
+          <input
+            type="checkbox"
+            className="mr-2"
+            checked={selectedSources.includes(src.name)}
+            onChange={() => toggleFilter(src.name, selectedSources, setSelectedSources)}
+          />
+          {src.name}
+          <span className="ml-1 text-xs text-white/40">({sourceCounts.get(src.name) ?? 0})</span>
+          {src.description && (
+            <button
+              type="button"
+              onClick={() => setOpenSourceInfo(v => v === src.id ? null : src.id)}
+              aria-label={`Что это за источник: ${src.name}`}
+              title="Пояснение к источнику"
+              className="ml-1.5 w-4 h-4 shrink-0 flex items-center justify-center rounded-full border border-white/30 text-[10px] leading-none text-white/60 hover:text-white hover:border-white/60 transition"
+            >
+              i
+            </button>
+          )}
+        </label>
+        {openSourceInfo === src.id && src.description && (
+          <div className="mt-1 mb-2 ml-6 text-xs text-white/70 bg-black/20 border border-white/10 rounded-lg p-2.5">
+            {renderWithLinks(src.description)}
+          </div>
+        )}
+      </div>
     ))}
   </div>
 

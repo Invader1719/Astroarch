@@ -18,8 +18,9 @@ def get_source_by_name(db: Session, name: str):
 def get_source(db: Session, source_id: int):
     return db.query(Source).filter(Source.id == source_id).first()
 
-def update_source(db: Session, db_source: Source, name: str):
+def update_source(db: Session, db_source: Source, name: str, description: str | None = None):
     db_source.name = name
+    db_source.description = description
     db.commit()
     db.refresh(db_source)
     return db_source
