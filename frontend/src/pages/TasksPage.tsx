@@ -158,6 +158,15 @@ function loadStoredFilters(): FiltersState {
   }
 }
 
+// Русское склонение по числу: ruPlural(5, ["подтема","подтемы","подтем"]) -> "подтем"
+function ruPlural(n: number, forms: [string, string, string]): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return forms[0]
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1]
+  return forms[2]
+}
+
 function formatGrades(grades: number[]): string {
   const g = [...new Set(grades)].sort((a, b) => a - b)
   if (g.length === 0) return ""
@@ -871,12 +880,18 @@ export default function TasksPage() {
                     onClick={() => toggleExpandedTopic(t.id)}
                     className="flex-1 flex items-center justify-between gap-2 text-left"
                   >
-                    <span className="font-semibold text-white text-sm">
-                      {t.name}
-                      <span className="ml-1.5 text-xs font-normal text-white/45">({topicCounts.get(t.id) ?? 0})</span>
-                      {selectedCount > 0 && (
-                        <span className="ml-1.5 text-xs font-semibold text-blue-300">выбрано: {selectedCount}</span>
-                      )}
+                    <span className="flex flex-col">
+                      <span className="font-semibold text-white text-sm">
+                        {t.name}
+                        {selectedCount > 0 && (
+                          <span className="ml-1.5 text-xs font-semibold text-blue-300">выбрано: {selectedCount}</span>
+                        )}
+                      </span>
+                      <span className="text-xs font-normal text-white/45">
+                        {topicSubtopics.length} {ruPlural(topicSubtopics.length, ["подтема", "подтемы", "подтем"])}
+                        {" · "}
+                        {topicCounts.get(t.id) ?? 0} {ruPlural(topicCounts.get(t.id) ?? 0, ["задача", "задачи", "задач"])}
+                      </span>
                     </span>
                     <span className="text-white/50 text-xs shrink-0">{isExpanded ? "▲" : "▼"}</span>
                   </button>
