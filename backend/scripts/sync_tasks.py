@@ -27,6 +27,7 @@ from app.models.source import Source
 from app.models.topic import Topic
 from app.models.subtopic import Subtopic
 from app.models.author import Author
+from app.models.user import User  # noqa: F401 — нужен для разрешения relationship("User") у Task
 from app.models.task import Task
 from app.models.task_image import TaskImage
 from app.seed_data import SOURCES, AUTHORS, TOPICS, TASKS
