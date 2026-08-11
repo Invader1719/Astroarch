@@ -18,8 +18,9 @@ def get_topic_by_name(db: Session, name: str):
 def get_topic(db: Session, topic_id: int):
     return db.query(Topic).filter(Topic.id == topic_id).first()
 
-def update_topic(db: Session, db_topic: Topic, name: str):
+def update_topic(db: Session, db_topic: Topic, name: str, description: str | None = None):
     db_topic.name = name
+    db_topic.description = description
     db.commit()
     db.refresh(db_topic)
     return db_topic

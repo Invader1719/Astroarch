@@ -28,7 +28,7 @@ type Task = {
 }
 
 type Source = { id: number; name: string; description?: string | null }
-type Topic = { id: number; name: string }
+type Topic = { id: number; name: string; description?: string | null }
 type Subtopic = { id: number; name: string; topic_id: number }
 type Author = { id: number; name: string }
 
@@ -77,12 +77,19 @@ const TOPIC_COLORS: Record<string, TopicColor> = {
     chipSelected: "bg-rose-400/40 border-rose-300 text-white",
     dot: "bg-rose-400",
   },
-  "Излучение и взаимодействие частиц": {
+  "Излучение": {
     border: "border-fuchsia-400/30",
     headerBg: "bg-fuchsia-400/10 hover:bg-fuchsia-400/15",
     chip: "bg-fuchsia-400/10 border-fuchsia-400/30 text-fuchsia-100/80 hover:border-fuchsia-400/60 hover:text-fuchsia-50",
     chipSelected: "bg-fuchsia-400/40 border-fuchsia-300 text-white",
     dot: "bg-fuchsia-400",
+  },
+  "Взаимодействие частиц": {
+    border: "border-pink-400/30",
+    headerBg: "bg-pink-400/10 hover:bg-pink-400/15",
+    chip: "bg-pink-400/10 border-pink-400/30 text-pink-100/80 hover:border-pink-400/60 hover:text-pink-50",
+    chipSelected: "bg-pink-400/40 border-pink-300 text-white",
+    dot: "bg-pink-400",
   },
   "Оптика": {
     border: "border-yellow-400/30",
@@ -90,6 +97,55 @@ const TOPIC_COLORS: Record<string, TopicColor> = {
     chip: "bg-yellow-400/10 border-yellow-400/30 text-yellow-100/80 hover:border-yellow-400/60 hover:text-yellow-50",
     chipSelected: "bg-yellow-400/40 border-yellow-300 text-white",
     dot: "bg-yellow-400",
+  },
+  "История астрономии": {
+    border: "border-amber-400/30",
+    headerBg: "bg-amber-400/10 hover:bg-amber-400/15",
+    chip: "bg-amber-400/10 border-amber-400/30 text-amber-100/80 hover:border-amber-400/60 hover:text-amber-50",
+    chipSelected: "bg-amber-400/40 border-amber-300 text-white",
+    dot: "bg-amber-400",
+  },
+  "Затмения": {
+    border: "border-indigo-400/30",
+    headerBg: "bg-indigo-400/10 hover:bg-indigo-400/15",
+    chip: "bg-indigo-400/10 border-indigo-400/30 text-indigo-100/80 hover:border-indigo-400/60 hover:text-indigo-50",
+    chipSelected: "bg-indigo-400/40 border-indigo-300 text-white",
+    dot: "bg-indigo-400",
+  },
+  "Галактики": {
+    border: "border-violet-400/30",
+    headerBg: "bg-violet-400/10 hover:bg-violet-400/15",
+    chip: "bg-violet-400/10 border-violet-400/30 text-violet-100/80 hover:border-violet-400/60 hover:text-violet-50",
+    chipSelected: "bg-violet-400/40 border-violet-300 text-white",
+    dot: "bg-violet-400",
+  },
+  "Космология": {
+    border: "border-cyan-400/30",
+    headerBg: "bg-cyan-400/10 hover:bg-cyan-400/15",
+    chip: "bg-cyan-400/10 border-cyan-400/30 text-cyan-100/80 hover:border-cyan-400/60 hover:text-cyan-50",
+    chipSelected: "bg-cyan-400/40 border-cyan-300 text-white",
+    dot: "bg-cyan-400",
+  },
+  "Математика": {
+    border: "border-emerald-400/30",
+    headerBg: "bg-emerald-400/10 hover:bg-emerald-400/15",
+    chip: "bg-emerald-400/10 border-emerald-400/30 text-emerald-100/80 hover:border-emerald-400/60 hover:text-emerald-50",
+    chipSelected: "bg-emerald-400/40 border-emerald-300 text-white",
+    dot: "bg-emerald-400",
+  },
+  "Физика": {
+    border: "border-orange-400/30",
+    headerBg: "bg-orange-400/10 hover:bg-orange-400/15",
+    chip: "bg-orange-400/10 border-orange-400/30 text-orange-100/80 hover:border-orange-400/60 hover:text-orange-50",
+    chipSelected: "bg-orange-400/40 border-orange-300 text-white",
+    dot: "bg-orange-400",
+  },
+  "СТО": {
+    border: "border-teal-400/30",
+    headerBg: "bg-teal-400/10 hover:bg-teal-400/15",
+    chip: "bg-teal-400/10 border-teal-400/30 text-teal-100/80 hover:border-teal-400/60 hover:text-teal-50",
+    chipSelected: "bg-teal-400/40 border-teal-300 text-white",
+    dot: "bg-teal-400",
   },
 }
 
@@ -287,8 +343,9 @@ export default function TasksPage() {
   // поиск по автору в списке фильтра — локальный UI‑стейт, в sessionStorage не сохраняем
   const [authorSearch, setAuthorSearch] = useState("")
 
-  // какой источник сейчас показывает пояснение (значок "ⓘ") — не более одного сразу
+  // какой источник/тема сейчас показывает пояснение (значок "ⓘ") — не более одного сразу
   const [openSourceInfo, setOpenSourceInfo] = useState<number | null>(null)
+  const [openTopicInfo, setOpenTopicInfo] = useState<number | null>(null)
 
   // поиск по тексту условия — с дебаунсом, чтобы не долбить сервер на каждое нажатие
   const [searchInput, setSearchInput] = useState(initialFilters.searchInput)
@@ -932,7 +989,24 @@ export default function TasksPage() {
                     </span>
                     <span className="text-white/50 text-xs shrink-0">{isExpanded ? "▲" : "▼"}</span>
                   </button>
+                  {t.description && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenTopicInfo(v => v === t.id ? null : t.id)}
+                      aria-label={`Что это за тема: ${t.name}`}
+                      title="Пояснение к теме"
+                      className="ml-0.5 w-4 h-4 shrink-0 flex items-center justify-center rounded-full border border-white/30 text-[10px] leading-none text-white/60 hover:text-white hover:border-white/60 transition"
+                    >
+                      i
+                    </button>
+                  )}
                 </div>
+
+                {openTopicInfo === t.id && t.description && (
+                  <div className="px-3 pb-2.5 pt-1.5 text-xs text-white/70 bg-black/10 border-t border-white/10">
+                    {renderWithLinks(t.description)}
+                  </div>
+                )}
 
                 {isExpanded && (
                   <div className="p-3 flex flex-wrap gap-2 bg-black/10 max-h-64 overflow-y-auto">

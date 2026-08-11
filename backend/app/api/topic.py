@@ -50,7 +50,7 @@ def update_topic(
     existing = crud_topic.get_topic_by_name(db, name)
     if existing and existing.id != topic_id:
         raise HTTPException(status_code=409, detail="Тема с таким названием уже существует")
-    return crud_topic.update_topic(db, db_topic, name)
+    return crud_topic.update_topic(db, db_topic, name, topic.description)
 
 @router.delete("/topics/{topic_id}", status_code=204)
 def delete_topic(

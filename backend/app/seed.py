@@ -13,7 +13,7 @@ from app.models.subtopic import Subtopic
 from app.models.author import Author
 from app.models.task import Task
 from app.models.task_image import TaskImage
-from app.seed_data import SOURCES, AUTHORS, TOPICS, TASKS
+from app.seed_data import SOURCES, AUTHORS, TOPICS, TOPIC_DESCRIPTIONS, TASKS
 from app.services.task_images import UPLOAD_DIR
 
 # Картинки задач-сидов лежат рядом с backend/ (не в uploads/ — тот не
@@ -70,7 +70,7 @@ def seed_if_empty(db: Session) -> None:
     topic_by_name = {}
     subtopic_by_key = {}
     for topic_name, subtopic_names in TOPICS.items():
-        topic = Topic(name=topic_name)
+        topic = Topic(name=topic_name, description=TOPIC_DESCRIPTIONS.get(topic_name))
         db.add(topic)
         db.flush()
         topic_by_name[topic_name] = topic
