@@ -17,7 +17,6 @@ from app.models import (
     user,
     author,
     task_suggestion,
-    progress_checkpoint,
     task_image
 )
 
